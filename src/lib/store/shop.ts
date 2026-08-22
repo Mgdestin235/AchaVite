@@ -15,74 +15,6 @@ import type {
   Promo,
 } from "../types";
 
-// Fixed reference instant so seed data is deterministic across server and
-// client renders (Date.now() would differ slightly between SSR and
-// hydration and could cause a hydration mismatch).
-const REFERENCE_NOW = new Date("2026-08-21T09:00:00.000Z").getTime();
-
-function seedOrders(): Order[] {
-  const cities = ["N'Djamena", "Moundou", "Sarh", "Abéché"];
-  const names = [
-    "Fatimé Abakar",
-    "Issa Moussa",
-    "Amina Djimet",
-    "Youssouf Adam",
-    "Kaltouma Hassan",
-    "Ahmat Seid",
-    "Halimé Oumar",
-    "Djibrine Ali",
-  ];
-  const statuses: OrderStatus[] = [
-    "livree",
-    "livree",
-    "expediee",
-    "preparation",
-    "payee",
-    "paiement_attente",
-    "livree",
-    "annulee",
-  ];
-  const methods: PaymentMethod[] = ["mtn", "orange", "wave", "carte"];
-
-  return statuses.map((status, i) => {
-    const p1 = PRODUCTS[(i * 5) % PRODUCTS.length];
-    const p2 = PRODUCTS[(i * 5 + 3) % PRODUCTS.length];
-    const qty1 = 1 + (i % 2);
-    const items: OrderItem[] = [
-      { productId: p1.id, name: p1.name, image: p1.images[0], price: p1.price, qty: qty1 },
-    ];
-    if (i % 3 !== 0) {
-      items.push({ productId: p2.id, name: p2.name, image: p2.images[0], price: p2.price, qty: 1 });
-    }
-    const subtotal = items.reduce((s, it) => s + it.price * it.qty, 0);
-    const deliveryFee = 1000 + (i % 3) * 500;
-    const daysAgo = 13 - i;
-    const createdAt = new Date(REFERENCE_NOW - daysAgo * 86400000).toISOString();
-    const id = `ord-seed-${i + 1}`;
-    return {
-      id,
-      code: orderCode(id + i.toString().padStart(6, "0")),
-      customer: {
-        name: names[i % names.length],
-        phone: `+235 66 0${i}0 00 0${i}`,
-        city: cities[i % cities.length],
-        address: `Quartier ${(i % 6) + 1}, Rue ${(i % 12) + 1}`,
-      },
-      items,
-      subtotal,
-      discount: 0,
-      deliveryFee,
-      total: subtotal + deliveryFee,
-      deliveryMode: i % 3 === 0 ? "boutique" : i % 3 === 1 ? "domicile" : "relais",
-      paymentMethod: methods[i % methods.length],
-      paymentStatus: status === "annulee" ? "annule" : status === "paiement_attente" ? "attente" : "reussi",
-      status,
-      createdAt,
-      estimatedDelivery: new Date(Date.parse(createdAt) + 3 * 86400000).toISOString(),
-    } satisfies Order;
-  });
-}
-
 type NewOrderInput = {
   customer: Order["customer"];
   items: OrderItem[];
@@ -126,7 +58,7 @@ export const useShopStore = create<ShopState>()(
       products: PRODUCTS,
       promos: PROMOS,
       zones: DELIVERY_ZONES,
-      orders: seedOrders(),
+      orders: [],
 
       addProduct: (p) => set((s) => ({ products: [p, ...s.products] })),
       updateProduct: (id, patch) =>
@@ -212,7 +144,7 @@ export const useShopStore = create<ShopState>()(
         );
       },
     }),
-    { name: "achavite-shop" }
+    { name: "achavite-shop-v2" }
   )
 );
 
