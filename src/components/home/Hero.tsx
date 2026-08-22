@@ -12,21 +12,21 @@ const SLIDES = [
     subtitle: "Découvrez des milliers de produits à prix imbattables, livrés partout au Tchad.",
     cta: "Découvrir les offres",
     href: "/promotions",
-    image: "https://picsum.photos/seed/hero-1/1200/800",
+    image: "https://images.unsplash.com/photo-1631245939104-906b762b2b83?w=1600&q=80",
   },
   {
     title: "Nouveaux smartphones disponibles",
     subtitle: "Jusqu'à -30% sur une sélection de téléphones cette semaine.",
     cta: "Voir les téléphones",
     href: "/categorie/telephones",
-    image: "https://picsum.photos/seed/hero-2/1200/800",
+    image: "https://images.unsplash.com/photo-1612115958726-9af4b6bd28d1?w=1600&q=80",
   },
   {
     title: "Mode & accessoires premium",
     subtitle: "Des styles tendance pour toute la famille, livrés rapidement.",
     cta: "Explorer la mode",
     href: "/categorie/mode",
-    image: "https://picsum.photos/seed/hero-3/1200/800",
+    image: "https://images.unsplash.com/photo-1625646741211-711bdd65c570?w=1600&q=80",
   },
 ];
 
@@ -57,9 +57,10 @@ export function Hero() {
               alt=""
               fill
               priority={index === 0}
-              className="object-cover opacity-30"
+              sizes="100vw"
+              className="object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/85 to-navy/20" />
+            <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/80 to-navy/25" />
           </motion.div>
         </AnimatePresence>
 

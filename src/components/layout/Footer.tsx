@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Globe, MessageCircle, Send } from "lucide-react";
 
@@ -6,8 +7,8 @@ export function Footer() {
     <footer className="mt-10 bg-navy-dark pb-24 pt-10 text-white/70 lg:pb-10">
       <div className="mx-auto grid max-w-7xl grid-cols-2 gap-8 px-4 sm:px-6 md:grid-cols-4">
         <div className="col-span-2 md:col-span-1">
-          <span className="text-lg font-extrabold text-white">
-            Acha<span className="text-orange">Vite</span>
+          <span className="inline-flex rounded-lg bg-white px-2 py-1.5">
+            <Image src="/brand/logo-full.png" alt="AchaVite" width={140} height={107} className="h-9 w-auto" />
           </span>
           <p className="mt-3 text-sm">
             La boutique en ligne 100% africaine. Les meilleures bonnes affaires à

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -33,13 +34,10 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-navy text-white">
       <div className="flex items-center gap-2 px-5 py-5">
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-lg font-extrabold text-orange">
-          A
+        <span className="inline-flex rounded-lg bg-white px-2 py-1.5">
+          <Image src="/brand/logo-full.png" alt="AchaVite" width={140} height={107} className="h-8 w-auto" />
         </span>
-        <div>
-          <p className="text-sm font-extrabold">AchaVite</p>
-          <p className="text-[11px] text-white/50">Administration</p>
-        </div>
+        <p className="text-[11px] text-white/50">Administration</p>
       </div>
       <nav className="flex-1 space-y-1 px-3">
         {NAV.map((item) => {
@@ -100,14 +98,9 @@ function AdminLoginGate() {
   return (
     <div className="flex min-h-[70vh] items-center justify-center px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-2xl bg-white p-6 ring-1 ring-black/5">
-        <div className="mb-4 flex items-center gap-2">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-navy text-lg font-extrabold text-orange">
-            A
-          </span>
-          <div>
-            <p className="text-sm font-bold text-navy">Espace administrateur</p>
-            <p className="text-xs text-gray-400">AchaVite</p>
-          </div>
+        <div className="mb-4 flex flex-col items-center gap-2 text-center">
+          <Image src="/brand/logo-full.png" alt="AchaVite" width={140} height={107} className="h-12 w-auto" />
+          <p className="text-sm font-bold text-navy">Espace administrateur</p>
         </div>
         <input
           value={password}

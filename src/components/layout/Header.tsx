@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { Menu, ShoppingCart, User, Package, X } from "lucide-react";
 import { useCartStore } from "@/lib/store/cart";
@@ -24,13 +25,15 @@ export function Header() {
           <Menu size={24} />
         </button>
 
-        <Link href="/" className="flex shrink-0 items-center gap-2">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-lg font-extrabold text-orange ring-1 ring-orange/40">
-            A
-          </span>
-          <span className="hidden text-lg font-extrabold text-white sm:block">
-            Acha<span className="text-orange">Vite</span>
-          </span>
+        <Link href="/" className="flex shrink-0 items-center rounded-lg bg-white px-2 py-1.5">
+          <Image
+            src="/brand/logo-full.png"
+            alt="AchaVite"
+            width={140}
+            height={107}
+            priority
+            className="h-8 w-auto sm:h-9"
+          />
         </Link>
 
         <div className="hidden flex-1 lg:block">
@@ -105,9 +108,7 @@ export function Header() {
           />
           <div className="absolute left-0 top-0 flex h-full w-72 max-w-[85vw] flex-col bg-white p-4 shadow-2xl">
             <div className="mb-4 flex items-center justify-between">
-              <span className="text-lg font-extrabold text-navy">
-                Acha<span className="text-orange">Vite</span>
-              </span>
+              <Image src="/brand/logo-full.png" alt="AchaVite" width={140} height={107} className="h-8 w-auto" />
               <button
                 onClick={() => setMenuOpen(false)}
                 className="rounded-lg p-1.5 text-navy hover:bg-navy/5"
