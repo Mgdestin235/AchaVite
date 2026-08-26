@@ -95,7 +95,43 @@ export default function AdminPromotionsPage() {
         </button>
       </form>
 
-      <div className="overflow-x-auto rounded-xl bg-white ring-1 ring-black/5">
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {promos.map((p) => (
+          <div key={p.code} className="rounded-xl bg-white p-3 ring-1 ring-black/5">
+            <div className="mb-2 flex items-center justify-between">
+              <span className="font-bold text-navy">{p.code}</span>
+              <button
+                onClick={() => handleDelete(p.code)}
+                className="rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+              >
+                <Trash2 size={16} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-y-1 text-xs text-gray-500">
+              <span>Réduction</span>
+              <span className="text-right font-medium text-navy">
+                {p.type === "percent" ? `${p.value}%` : `${p.value} FCFA`}
+              </span>
+              <span>Période</span>
+              <span className="text-right">{p.startDate} → {p.endDate}</span>
+              <span>Utilisation</span>
+              <span className="text-right">{p.used} / {p.maxUses}</span>
+            </div>
+            <button
+              onClick={() => updatePromo(p.code, { active: !p.active })}
+              className={`mt-3 w-full rounded-lg px-2.5 py-1.5 text-xs font-semibold ${
+                p.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+              }`}
+            >
+              {p.active ? "Actif" : "Inactif"}
+            </button>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded-xl bg-white ring-1 ring-black/5 md:block">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 text-xs uppercase text-gray-400">

@@ -79,7 +79,58 @@ export default function AdminProductsPage() {
         />
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-white ring-1 ring-black/5">
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {filtered.map((p) => {
+          const category = CATEGORIES.find((c) => c.slug === p.category);
+          return (
+            <div key={p.id} className="rounded-xl bg-white p-3 ring-1 ring-black/5">
+              <div className="flex items-center gap-3">
+                <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                  <Image src={p.images[0]} alt={p.name} fill className="object-cover" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="line-clamp-1 text-sm font-medium text-navy">{p.name}</p>
+                  <p className="text-xs text-gray-400">{category?.name ?? p.category}</p>
+                </div>
+                <div className="flex shrink-0 gap-1">
+                  <button
+                    onClick={() => {
+                      setEditing(p);
+                      setShowForm(true);
+                    }}
+                    className="rounded-lg p-2 text-navy hover:bg-navy/5"
+                  >
+                    <Pencil size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(p)}
+                    className="rounded-lg p-2 text-red-500 hover:bg-red-50"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-sm">
+                <span className="font-semibold text-navy">{formatFCFA(p.price)}</span>
+                <span className={p.stock <= 5 ? "font-semibold text-orange" : "text-gray-600"}>
+                  Stock : {p.stock}
+                </span>
+                <span
+                  className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                    p.active ? "bg-green-100 text-green-700" : "bg-gray-100 text-gray-500"
+                  }`}
+                >
+                  {p.active ? "Actif" : "Masqué"}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded-xl bg-white ring-1 ring-black/5 md:block">
         <table className="w-full min-w-[720px] text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 text-xs uppercase text-gray-400">

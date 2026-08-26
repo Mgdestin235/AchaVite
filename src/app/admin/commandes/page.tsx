@@ -82,7 +82,52 @@ export default function AdminOrdersPage() {
         </select>
       </div>
 
-      <div className="overflow-x-auto rounded-xl bg-white ring-1 ring-black/5">
+      {/* Mobile: card list */}
+      <div className="space-y-2 md:hidden">
+        {filtered.map((o) => (
+          <div key={o.id} className="rounded-xl bg-white p-3 ring-1 ring-black/5">
+            <div className="mb-2 flex items-start justify-between gap-2">
+              <div>
+                <p className="text-sm font-bold text-navy">{o.code}</p>
+                <p className="text-xs text-gray-400">
+                  {new Date(o.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                </p>
+              </div>
+              <span className="text-sm font-semibold text-navy">{formatFCFA(o.total)}</span>
+            </div>
+            <p className="text-sm text-navy">{o.customer.name}</p>
+            <p className="mb-3 text-xs text-gray-400">{o.customer.phone}</p>
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+              <span
+                className={`rounded-full px-2 py-0.5 font-semibold ${
+                  o.paymentStatus === "reussi"
+                    ? "bg-green-100 text-green-700"
+                    : o.paymentStatus === "echoue"
+                      ? "bg-red-100 text-red-600"
+                      : o.paymentStatus === "annule"
+                        ? "bg-gray-100 text-gray-500"
+                        : "bg-yellow-100 text-yellow-700"
+                }`}
+              >
+                {o.paymentStatus}
+              </span>
+              <span className="text-gray-500">{DELIVERY_LABELS[o.deliveryMode]}</span>
+            </div>
+            <select
+              value={o.status}
+              onChange={(e) => handleStatusChange(o, e.target.value as OrderStatus)}
+              className={`w-full rounded-lg border-0 px-2 py-2 text-xs font-semibold outline-none ${STATUS_COLORS[o.status]}`}
+            >
+              {STATUS_OPTIONS.map((s) => (
+                <option key={s.value} value={s.value}>{s.label}</option>
+              ))}
+            </select>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop: table */}
+      <div className="hidden overflow-x-auto rounded-xl bg-white ring-1 ring-black/5 md:block">
         <table className="w-full min-w-[860px] text-left text-sm">
           <thead>
             <tr className="border-b border-gray-100 text-xs uppercase text-gray-400">
