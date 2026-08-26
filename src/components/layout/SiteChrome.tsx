@@ -4,7 +4,6 @@ import { usePathname } from "next/navigation";
 import { Header } from "./Header";
 import { Footer } from "./Footer";
 import { MobileNav } from "./MobileNav";
-import { InstallPwaBanner } from "./InstallPwaBanner";
 
 export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -20,7 +19,6 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
       <main className="flex-1 pb-16 lg:pb-0">{children}</main>
       <Footer />
       <MobileNav />
-      <InstallPwaBanner />
     </>
   );
 }

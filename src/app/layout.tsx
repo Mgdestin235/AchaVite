@@ -3,6 +3,7 @@ import { Inter, Poppins } from "next/font/google";
 import { Toaster } from "sonner";
 import { SiteChrome } from "@/components/layout/SiteChrome";
 import { PwaRegister } from "@/components/layout/PwaRegister";
+import { InstallPwaBanner } from "@/components/layout/InstallPwaBanner";
 import "./globals.css";
 
 const inter = Inter({
@@ -59,6 +60,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col bg-white">
         <PwaRegister />
         <SiteChrome>{children}</SiteChrome>
+        <InstallPwaBanner />
         <Toaster position="top-center" richColors closeButton />
       </body>
     </html>
