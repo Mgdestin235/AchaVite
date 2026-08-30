@@ -2,16 +2,14 @@
 
 import { useMemo } from "react";
 import Link from "next/link";
-import { PartyPopper, ArrowRight } from "lucide-react";
+import { PartyPopper, MessageCircle, ArrowRight } from "lucide-react";
 import { useShopStore } from "@/lib/store/shop";
 import { formatFCFA } from "@/lib/format";
+import { buildOrderWhatsAppLink } from "@/lib/whatsapp";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 const PAYMENT_LABELS: Record<string, string> = {
-  mtn: "MTN Mobile Money",
-  orange: "Orange Money",
-  wave: "Wave",
-  carte: "Carte bancaire",
+  whatsapp: "WhatsApp",
 };
 
 const DELIVERY_LABELS: Record<string, string> = {
@@ -22,6 +20,7 @@ const DELIVERY_LABELS: Record<string, string> = {
 
 export function ConfirmationPageClient({ orderId }: { orderId: string }) {
   const orders = useShopStore((s) => s.orders);
+  const whatsappNumber = useShopStore((s) => s.settings.whatsappNumber);
   const order = useMemo(() => orders.find((o) => o.id === orderId), [orders, orderId]);
 
   if (!order) {
@@ -37,20 +36,39 @@ export function ConfirmationPageClient({ orderId }: { orderId: string }) {
     );
   }
 
+  const isPaid = order.paymentStatus === "reussi";
+  const waLink = buildOrderWhatsAppLink(order, whatsappNumber);
+
   return (
     <div className="mx-auto max-w-xl px-4 py-10 text-center sm:px-6">
-      <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-light text-orange">
-        <PartyPopper size={30} />
-      </span>
-      <h1 className="text-xl font-bold text-navy sm:text-2xl">Commande confirmée 🎉</h1>
-      <p className="mt-2 text-sm text-gray-500">
-        Merci {order.customer.name.split(" ")[0]} ! Votre commande a été enregistrée avec succès.
-      </p>
+      {isPaid ? (
+        <>
+          <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-orange-light text-orange">
+            <PartyPopper size={30} />
+          </span>
+          <h1 className="text-xl font-bold text-navy sm:text-2xl">Commande confirmée 🎉</h1>
+          <p className="mt-2 text-sm text-gray-500">
+            Merci {order.customer.name.split(" ")[0]} ! Votre commande a été enregistrée avec
+            succès.
+          </p>
+        </>
+      ) : (
+        <>
+          <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-50 text-green-600">
+            <MessageCircle size={30} />
+          </span>
+          <h1 className="text-xl font-bold text-navy sm:text-2xl">Commande enregistrée</h1>
+          <p className="mt-2 text-sm text-gray-500">
+            Merci {order.customer.name.split(" ")[0]} ! Finalisez votre paiement dans la
+            conversation WhatsApp qui vient de s&apos;ouvrir pour confirmer votre commande.
+          </p>
+        </>
+      )}
 
       <div className="mt-6 space-y-3 rounded-xl bg-white p-5 text-left ring-1 ring-black/5">
         <Row label="Numéro de commande" value={order.code} />
         <Row label="Montant total" value={formatFCFA(order.total)} />
-        <Row label="Mode de paiement" value={PAYMENT_LABELS[order.paymentMethod]} />
+        <Row label="Mode de paiement" value={PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod} />
         <Row label="Mode de livraison" value={DELIVERY_LABELS[order.deliveryMode]} />
         {order.deliveryMode === "domicile" && (
           <Row label="Adresse" value={`${order.customer.address}, ${order.customer.city}`} />
@@ -68,9 +86,21 @@ export function ConfirmationPageClient({ orderId }: { orderId: string }) {
         />
       </div>
 
+      {!isPaid && waLink && (
+        <a
+          href={waLink}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#25D366] py-3.5 text-sm font-bold text-white hover:opacity-90"
+        >
+          <MessageCircle size={18} />
+          Rouvrir WhatsApp
+        </a>
+      )}
+
       <Link
         href={`/suivi?code=${order.code}`}
-        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-orange py-3.5 text-sm font-bold text-white shadow-lg shadow-orange/25 hover:bg-orange-dark"
+        className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl bg-orange py-3.5 text-sm font-bold text-white shadow-lg shadow-orange/25 hover:bg-orange-dark"
       >
         Suivre ma commande
         <ArrowRight size={18} />

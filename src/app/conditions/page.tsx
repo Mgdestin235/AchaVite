@@ -15,8 +15,8 @@ export default function ConditionsPage() {
       </p>
       <h2 className="mb-2 mt-5 font-bold text-navy">Paiement</h2>
       <p className="mb-3">
-        Le paiement s&apos;effectue via Mobile Money, carte bancaire ou tout autre moyen proposé
-        au moment du paiement. La commande est traitée dès confirmation du paiement.
+        Le paiement se finalise via WhatsApp, en échange direct avec l&apos;équipe AchaVite. La
+        commande est traitée dès confirmation du paiement par nos équipes.
       </p>
       <h2 className="mb-2 mt-5 font-bold text-navy">Livraison</h2>
       <p className="mb-3">

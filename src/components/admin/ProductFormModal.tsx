@@ -3,8 +3,10 @@
 import { useState } from "react";
 import { X } from "lucide-react";
 import { CATEGORIES } from "@/lib/data";
-import { slugify } from "@/lib/format";
-import type { Product } from "@/lib/types";
+import { ImageUploadGrid } from "./ImageUploadGrid";
+import { VideoUploadField } from "./VideoUploadField";
+import { DocumentUploadList } from "./DocumentUploadList";
+import type { Product, ProductFile } from "@/lib/types";
 
 type FormValues = {
   name: string;
@@ -17,6 +19,9 @@ type FormValues = {
   isNew: boolean;
   isBestSeller: boolean;
   active: boolean;
+  images: string[];
+  videoUrl?: string;
+  files: ProductFile[];
 };
 
 const EMPTY: FormValues = {
@@ -30,6 +35,9 @@ const EMPTY: FormValues = {
   isNew: false,
   isBestSeller: false,
   active: true,
+  images: [],
+  videoUrl: undefined,
+  files: [],
 };
 
 export function ProductFormModal({
@@ -39,7 +47,7 @@ export function ProductFormModal({
 }: {
   product?: Product;
   onClose: () => void;
-  onSave: (values: Omit<Product, "id" | "slug" | "images" | "rating" | "reviews" | "sold" | "createdAt"> & { images?: string[] }) => void;
+  onSave: (values: Omit<Product, "id" | "slug" | "rating" | "reviews" | "sold" | "createdAt">) => void;
 }) {
   const [values, setValues] = useState<FormValues>(() =>
     product
@@ -54,6 +62,9 @@ export function ProductFormModal({
           isNew: product.isNew,
           isBestSeller: product.isBestSeller,
           active: product.active,
+          images: product.images,
+          videoUrl: product.videoUrl,
+          files: product.files,
         }
       : EMPTY
   );
@@ -61,23 +72,22 @@ export function ProductFormModal({
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!values.name.trim() || !values.price) return;
-
-    const price = Number(values.price);
-    const oldPrice = values.oldPrice ? Number(values.oldPrice) : undefined;
-    const slug = slugify(values.name);
+    if (values.images.length === 0) return;
 
     onSave({
       name: values.name.trim(),
       category: values.category,
-      price,
-      oldPrice,
+      price: Number(values.price),
+      oldPrice: values.oldPrice ? Number(values.oldPrice) : undefined,
       stock: Number(values.stock) || 0,
       description: values.description.trim(),
       highlights: values.highlights.split("\n").map((h) => h.trim()).filter(Boolean),
       isNew: values.isNew,
       isBestSeller: values.isBestSeller,
       active: values.active,
-      images: product?.images ?? [0, 1, 2].map((n) => `https://picsum.photos/seed/${slug}-${n}/900/900`),
+      images: values.images,
+      videoUrl: values.videoUrl,
+      files: values.files,
     });
   }
 
@@ -96,7 +106,15 @@ export function ProductFormModal({
           </button>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
+          <ImageUploadGrid
+            images={values.images}
+            onChange={(images) => setValues({ ...values, images })}
+          />
+          {values.images.length === 0 && (
+            <p className="-mt-2 text-xs text-red-500">Ajoutez au moins une photo.</p>
+          )}
+
           <input
             required
             value={values.name}
@@ -160,7 +178,7 @@ export function ProductFormModal({
             className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
           />
 
-          <div className="flex flex-wrap gap-4 pt-1">
+          <div className="flex flex-wrap gap-4">
             <label className="flex items-center gap-2 text-sm text-navy">
               <input
                 type="checkbox"
@@ -188,6 +206,24 @@ export function ProductFormModal({
               />
               Actif (visible sur le site)
             </label>
+          </div>
+
+          <div className="space-y-4 border-t border-gray-100 pt-4">
+            <p className="text-xs font-semibold uppercase text-gray-400">Médias complémentaires</p>
+            <VideoUploadField
+              videoUrl={values.videoUrl}
+              onChange={(videoUrl) => setValues({ ...values, videoUrl })}
+            />
+            <DocumentUploadList
+              kind="pdf"
+              files={values.files}
+              onChange={(files) => setValues({ ...values, files })}
+            />
+            <DocumentUploadList
+              kind="ebook"
+              files={values.files}
+              onChange={(files) => setValues({ ...values, files })}
+            />
           </div>
         </div>
 

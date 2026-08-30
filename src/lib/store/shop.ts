@@ -28,11 +28,18 @@ type NewOrderInput = {
   paymentMethod: PaymentMethod;
 };
 
+type Settings = {
+  whatsappNumber: string;
+};
+
 type ShopState = {
   products: Product[];
   promos: Promo[];
   zones: DeliveryZone[];
   orders: Order[];
+  settings: Settings;
+
+  updateSettings: (patch: Partial<Settings>) => void;
 
   addProduct: (p: Product) => void;
   updateProduct: (id: string, patch: Partial<Product>) => void;
@@ -59,6 +66,10 @@ export const useShopStore = create<ShopState>()(
       promos: PROMOS,
       zones: DELIVERY_ZONES,
       orders: [],
+      settings: { whatsappNumber: "" },
+
+      updateSettings: (patch) =>
+        set((s) => ({ settings: { ...s.settings, ...patch } })),
 
       addProduct: (p) => set((s) => ({ products: [p, ...s.products] })),
       updateProduct: (id, patch) =>
@@ -132,7 +143,16 @@ export const useShopStore = create<ShopState>()(
 
       setOrderStatus: (id, status) =>
         set((s) => ({
-          orders: s.orders.map((o) => (o.id === id ? { ...o, status } : o)),
+          orders: s.orders.map((o) => {
+            if (o.id !== id) return o;
+            const paymentStatus: PaymentStatus =
+              status === "payee"
+                ? "reussi"
+                : status === "annulee"
+                  ? "annule"
+                  : o.paymentStatus;
+            return { ...o, status, paymentStatus };
+          }),
         })),
 
       findOrder: (codeOrPhone) => {

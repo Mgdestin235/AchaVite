@@ -17,13 +17,13 @@ const FAQS = [
   },
   {
     section: "paiement",
-    question: "Quels moyens de paiement acceptez-vous ?",
-    answer: "MTN Mobile Money, Orange Money, Wave et carte bancaire via notre passerelle sécurisée CinetPay.",
+    question: "Comment se passe le paiement ?",
+    answer: "Après avoir validé votre commande, vous êtes redirigé vers WhatsApp pour finaliser le paiement directement avec l'équipe AchaVite, en toute simplicité.",
   },
   {
     section: "paiement",
-    question: "Mes informations bancaires sont-elles en sécurité ?",
-    answer: "Oui. AchaVite ne stocke jamais vos informations de carte bancaire. Tous les paiements passent par des prestataires certifiés.",
+    question: "Mes informations sont-elles en sécurité ?",
+    answer: "Oui. AchaVite ne demande jamais vos informations bancaires. Les échanges se font via WhatsApp, chiffré de bout en bout, avec référence directe à votre commande.",
   },
   {
     section: "retours",

@@ -5,6 +5,15 @@ export type Category = {
   image: string;
 };
 
+export type ProductFileKind = "pdf" | "ebook";
+
+export type ProductFile = {
+  id: string;
+  name: string;
+  url: string;
+  kind: ProductFileKind;
+};
+
 export type Product = {
   id: string;
   slug: string;
@@ -13,6 +22,8 @@ export type Product = {
   price: number;
   oldPrice?: number;
   images: string[];
+  videoUrl?: string;
+  files: ProductFile[];
   description: string;
   highlights: string[];
   stock: number;
@@ -32,11 +43,7 @@ export type CartLine = {
 
 export type DeliveryMode = "domicile" | "relais" | "boutique";
 
-export type PaymentMethod =
-  | "mtn"
-  | "orange"
-  | "wave"
-  | "carte";
+export type PaymentMethod = "whatsapp";
 
 export type PaymentStatus = "reussi" | "echoue" | "annule" | "attente";
 

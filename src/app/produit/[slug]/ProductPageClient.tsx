@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Minus, Plus, ShoppingCart, Star, Zap, ChevronRight, Check } from "lucide-react";
+import { Minus, Plus, ShoppingCart, Star, Zap, ChevronRight, Check, FileText, BookOpen, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useShopStore } from "@/lib/store/shop";
 import { useCartStore } from "@/lib/store/cart";
@@ -84,11 +84,20 @@ export function ProductPageClient({ slug }: { slug: string }) {
       </nav>
 
       <div className="grid gap-8 lg:grid-cols-2">
-        <div className="relative">
-          <Gallery images={product.images} alt={product.name} />
-          <div className="pointer-events-none absolute left-0 top-0">
-            <ProductBadges product={product} />
+        <div>
+          <div className="relative">
+            <Gallery images={product.images} alt={product.name} />
+            <div className="pointer-events-none absolute left-0 top-0">
+              <ProductBadges product={product} />
+            </div>
           </div>
+          {product.videoUrl && (
+            <video
+              src={product.videoUrl}
+              controls
+              className="mt-3 aspect-video w-full rounded-2xl bg-black"
+            />
+          )}
         </div>
 
         <div>
@@ -130,6 +139,24 @@ export function ProductPageClient({ slug }: { slug: string }) {
                 </li>
               ))}
             </ul>
+          )}
+
+          {product.files.length > 0 && (
+            <div className="mt-4 space-y-1.5">
+              {product.files.map((f) => (
+                <a
+                  key={f.id}
+                  href={f.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-sm text-navy hover:border-orange hover:text-orange"
+                >
+                  {f.kind === "ebook" ? <BookOpen size={16} /> : <FileText size={16} />}
+                  <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                  <Download size={15} className="shrink-0" />
+                </a>
+              ))}
+            </div>
           )}
 
           <div className="mt-4 text-sm">

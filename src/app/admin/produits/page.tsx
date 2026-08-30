@@ -38,7 +38,6 @@ export default function AdminProductsPage() {
         reviews: 0,
         sold: 0,
         createdAt: new Date().toISOString(),
-        images: values.images ?? [],
         ...values,
       });
       toast.success("Produit ajouté");

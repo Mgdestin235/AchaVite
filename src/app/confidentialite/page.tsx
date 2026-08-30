@@ -15,8 +15,8 @@ export default function ConfidentialitePage() {
       </p>
       <h2 className="mb-2 mt-5 font-bold text-navy">Paiement</h2>
       <p className="mb-3">
-        AchaVite ne stocke aucune information bancaire. Les paiements sont traités par des
-        prestataires certifiés (CinetPay et opérateurs Mobile Money).
+        AchaVite ne demande jamais d&apos;information bancaire. Le paiement se finalise directement
+        avec nos équipes via WhatsApp, une messagerie chiffrée de bout en bout.
       </p>
       <h2 className="mb-2 mt-5 font-bold text-navy">Vos droits</h2>
       <p className="mb-3">

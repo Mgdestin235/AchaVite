@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   ExternalLink,
+  Settings,
 } from "lucide-react";
 import { useAdminAuthStore } from "@/lib/store/auth";
 import { cn } from "@/lib/cn";
@@ -24,6 +25,7 @@ const NAV = [
   { href: "/admin/stock", label: "Stock", icon: Package },
   { href: "/admin/promotions", label: "Promotions", icon: BadgePercent },
   { href: "/admin/livraison", label: "Livraison", icon: Truck },
+  { href: "/admin/parametres", label: "Paramètres", icon: Settings },
 ];
 
 function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
