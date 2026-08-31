@@ -6,7 +6,8 @@ export default function ConfidentialitePage() {
       <h1 className="mb-4 text-xl font-bold text-navy">Politique de confidentialité</h1>
       <p className="mb-3">
         AchaVite collecte uniquement les informations nécessaires au traitement de vos commandes :
-        nom, téléphone, adresse et ville de livraison.
+        nom, téléphone, adresse et ville de livraison, ainsi que votre email lorsque votre
+        commande contient un produit numérique (pour vous l&apos;envoyer).
       </p>
       <h2 className="mb-2 mt-5 font-bold text-navy">Utilisation des données</h2>
       <p className="mb-3">

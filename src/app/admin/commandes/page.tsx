@@ -5,7 +5,8 @@ import { Search } from "lucide-react";
 import { toast } from "sonner";
 import { useShopStore } from "@/lib/store/shop";
 import { formatFCFA } from "@/lib/format";
-import type { Order, OrderStatus } from "@/lib/types";
+import { sendDigitalDelivery } from "@/lib/digitalDelivery";
+import type { Order, OrderStatus, ProductFile } from "@/lib/types";
 
 const STATUS_OPTIONS: { value: OrderStatus; label: string }[] = [
   { value: "nouvelle", label: "Nouvelle" },
@@ -35,7 +36,9 @@ const DELIVERY_LABELS: Record<Order["deliveryMode"], string> = {
 
 export default function AdminOrdersPage() {
   const orders = useShopStore((s) => s.orders);
+  const products = useShopStore((s) => s.products);
   const setOrderStatus = useShopStore((s) => s.setOrderStatus);
+  const markDigitalDelivered = useShopStore((s) => s.markDigitalDelivered);
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "">("");
 
@@ -54,6 +57,32 @@ export default function AdminOrdersPage() {
   function handleStatusChange(order: Order, status: OrderStatus) {
     setOrderStatus(order.id, status);
     toast.success(`Commande ${order.code} : statut mis à jour`);
+
+    if (status !== "payee" || order.digitalDelivered) return;
+
+    const files: ProductFile[] = order.items.flatMap(
+      (it) => products.find((p) => p.id === it.productId)?.files ?? []
+    );
+    if (files.length === 0) return;
+
+    if (!order.customer.email) {
+      toast.warning(`Commande ${order.code} : produit numérique mais aucun email client renseigné.`);
+      return;
+    }
+
+    sendDigitalDelivery({
+      email: order.customer.email,
+      orderCode: order.code,
+      customerName: order.customer.name,
+      files: files.map((f) => ({ name: f.name, url: f.url })),
+    })
+      .then(() => {
+        markDigitalDelivered(order.id);
+        toast.success(`Produit numérique envoyé à ${order.customer.email}`);
+      })
+      .catch((err) => {
+        toast.error(err instanceof Error ? err.message : "Échec de l'envoi du produit numérique");
+      });
   }
 
   return (

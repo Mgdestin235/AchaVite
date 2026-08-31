@@ -18,7 +18,7 @@ const FAQS = [
   {
     section: "paiement",
     question: "Comment se passe le paiement ?",
-    answer: "Après avoir validé votre commande, vous êtes redirigé vers WhatsApp pour finaliser le paiement directement avec l'équipe AchaVite, en toute simplicité.",
+    answer: "Choisissez votre moyen de paiement (MTN Mobile Money, Airtel Money, Moov Money ou virement bancaire), effectuez le transfert, puis confirmez sur WhatsApp avec la référence de votre commande.",
   },
   {
     section: "paiement",

@@ -1,5 +1,5 @@
 import { formatFCFA } from "./format";
-import type { Order } from "./types";
+import type { Order, PaymentMethod } from "./types";
 
 const DELIVERY_LABELS: Record<Order["deliveryMode"], string> = {
   domicile: "Livraison à domicile",
@@ -7,12 +7,19 @@ const DELIVERY_LABELS: Record<Order["deliveryMode"], string> = {
   boutique: "Retrait en boutique",
 };
 
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  mtn: "MTN Mobile Money",
+  airtel: "Airtel Money",
+  moov: "Moov Money",
+  banque: "Virement bancaire",
+};
+
 /** Builds the pre-filled message sent to the store's WhatsApp number. */
 export function buildOrderWhatsAppMessage(order: Order): string {
   const lines = [
     `Bonjour AchaVite 👋`,
     ``,
-    `Je souhaite finaliser le paiement de ma commande *${order.code}*.`,
+    `Je viens d'effectuer le paiement de ma commande *${order.code}* via ${PAYMENT_METHOD_LABELS[order.paymentMethod]}.`,
     ``,
     `Articles :`,
     ...order.items.map((it) => `• ${it.name} x${it.qty} — ${formatFCFA(it.price * it.qty)}`),
@@ -20,13 +27,13 @@ export function buildOrderWhatsAppMessage(order: Order): string {
     `Sous-total : ${formatFCFA(order.subtotal)}`,
     ...(order.discount > 0 ? [`Réduction : -${formatFCFA(order.discount)}`] : []),
     `Livraison : ${formatFCFA(order.deliveryFee)} (${DELIVERY_LABELS[order.deliveryMode]})`,
-    `Total à payer : ${formatFCFA(order.total)}`,
+    `Total payé : ${formatFCFA(order.total)}`,
     ``,
     `Nom : ${order.customer.name}`,
     `Téléphone : ${order.customer.phone}`,
     `Ville : ${order.customer.city}`,
     ``,
-    `Merci de me confirmer les modalités de paiement.`,
+    `Merci de confirmer la réception de mon paiement.`,
   ];
   return lines.join("\n");
 }

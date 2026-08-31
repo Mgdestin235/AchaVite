@@ -43,7 +43,30 @@ export type CartLine = {
 
 export type DeliveryMode = "domicile" | "relais" | "boutique";
 
-export type PaymentMethod = "whatsapp";
+export type PaymentMethod = "mtn" | "airtel" | "moov" | "banque";
+
+export type MobileMoneyConfig = {
+  enabled: boolean;
+  label: string;
+  number: string;
+};
+
+export type BankTransferConfig = {
+  enabled: boolean;
+  bankName: string;
+  accountNumber: string;
+  accountHolder: string;
+};
+
+export type ShopSettings = {
+  whatsappNumber: string;
+  paymentMethods: {
+    mtn: MobileMoneyConfig;
+    airtel: MobileMoneyConfig;
+    moov: MobileMoneyConfig;
+    banque: BankTransferConfig;
+  };
+};
 
 export type PaymentStatus = "reussi" | "echoue" | "annule" | "attente";
 
@@ -70,6 +93,7 @@ export type Order = {
   customer: {
     name: string;
     phone: string;
+    email?: string;
     city: string;
     address: string;
     neighborhood?: string;
@@ -88,6 +112,7 @@ export type Order = {
   status: OrderStatus;
   createdAt: string;
   estimatedDelivery: string;
+  digitalDelivered?: boolean;
 };
 
 export type Promo = {

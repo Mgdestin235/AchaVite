@@ -13,7 +13,18 @@ import type {
   PaymentStatus,
   Product,
   Promo,
+  ShopSettings,
 } from "../types";
+
+const DEFAULT_SETTINGS: ShopSettings = {
+  whatsappNumber: "",
+  paymentMethods: {
+    mtn: { enabled: false, label: "MTN Mobile Money", number: "" },
+    airtel: { enabled: false, label: "Airtel Money", number: "" },
+    moov: { enabled: false, label: "Moov Money", number: "" },
+    banque: { enabled: false, bankName: "", accountNumber: "", accountHolder: "" },
+  },
+};
 
 type NewOrderInput = {
   customer: Order["customer"];
@@ -28,18 +39,15 @@ type NewOrderInput = {
   paymentMethod: PaymentMethod;
 };
 
-type Settings = {
-  whatsappNumber: string;
-};
-
 type ShopState = {
   products: Product[];
   promos: Promo[];
   zones: DeliveryZone[];
   orders: Order[];
-  settings: Settings;
+  settings: ShopSettings;
 
-  updateSettings: (patch: Partial<Settings>) => void;
+  updateSettings: (patch: Partial<ShopSettings>) => void;
+  markDigitalDelivered: (id: string) => void;
 
   addProduct: (p: Product) => void;
   updateProduct: (id: string, patch: Partial<Product>) => void;
@@ -66,10 +74,14 @@ export const useShopStore = create<ShopState>()(
       promos: PROMOS,
       zones: DELIVERY_ZONES,
       orders: [],
-      settings: { whatsappNumber: "" },
+      settings: DEFAULT_SETTINGS,
 
       updateSettings: (patch) =>
         set((s) => ({ settings: { ...s.settings, ...patch } })),
+      markDigitalDelivered: (id) =>
+        set((s) => ({
+          orders: s.orders.map((o) => (o.id === id ? { ...o, digitalDelivered: true } : o)),
+        })),
 
       addProduct: (p) => set((s) => ({ products: [p, ...s.products] })),
       updateProduct: (id, patch) =>
@@ -164,7 +176,27 @@ export const useShopStore = create<ShopState>()(
         );
       },
     }),
-    { name: "achavite-shop-v2" }
+    {
+      name: "achavite-shop-v2",
+      version: 1,
+      // v0 -> v1: settings gained `paymentMethods`, and products gained the
+      // `files` array (media uploads). Backfill both so data saved before
+      // this change doesn't crash on the new shape.
+      migrate: (persisted) => {
+        const state = persisted as Partial<ShopState> & { settings?: Partial<ShopSettings> };
+        return {
+          ...state,
+          settings: {
+            whatsappNumber: state.settings?.whatsappNumber ?? "",
+            paymentMethods: {
+              ...DEFAULT_SETTINGS.paymentMethods,
+              ...state.settings?.paymentMethods,
+            },
+          },
+          products: (state.products ?? []).map((p) => ({ ...p, files: p.files ?? [] })),
+        };
+      },
+    }
   )
 );
 

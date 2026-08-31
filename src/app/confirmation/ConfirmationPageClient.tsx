@@ -5,12 +5,8 @@ import Link from "next/link";
 import { PartyPopper, MessageCircle, ArrowRight } from "lucide-react";
 import { useShopStore } from "@/lib/store/shop";
 import { formatFCFA } from "@/lib/format";
-import { buildOrderWhatsAppLink } from "@/lib/whatsapp";
+import { buildOrderWhatsAppLink, PAYMENT_METHOD_LABELS } from "@/lib/whatsapp";
 import { EmptyState } from "@/components/ui/EmptyState";
-
-const PAYMENT_LABELS: Record<string, string> = {
-  whatsapp: "WhatsApp",
-};
 
 const DELIVERY_LABELS: Record<string, string> = {
   domicile: "Livraison à domicile",
@@ -20,6 +16,7 @@ const DELIVERY_LABELS: Record<string, string> = {
 
 export function ConfirmationPageClient({ orderId }: { orderId: string }) {
   const orders = useShopStore((s) => s.orders);
+  const products = useShopStore((s) => s.products);
   const whatsappNumber = useShopStore((s) => s.settings.whatsappNumber);
   const order = useMemo(() => orders.find((o) => o.id === orderId), [orders, orderId]);
 
@@ -38,6 +35,9 @@ export function ConfirmationPageClient({ orderId }: { orderId: string }) {
 
   const isPaid = order.paymentStatus === "reussi";
   const waLink = buildOrderWhatsAppLink(order, whatsappNumber);
+  const hasDigitalItem = order.items.some(
+    (it) => (products.find((p) => p.id === it.productId)?.files.length ?? 0) > 0
+  );
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10 text-center sm:px-6">
@@ -68,7 +68,7 @@ export function ConfirmationPageClient({ orderId }: { orderId: string }) {
       <div className="mt-6 space-y-3 rounded-xl bg-white p-5 text-left ring-1 ring-black/5">
         <Row label="Numéro de commande" value={order.code} />
         <Row label="Montant total" value={formatFCFA(order.total)} />
-        <Row label="Mode de paiement" value={PAYMENT_LABELS[order.paymentMethod] ?? order.paymentMethod} />
+        <Row label="Mode de paiement" value={PAYMENT_METHOD_LABELS[order.paymentMethod] ?? order.paymentMethod} />
         <Row label="Mode de livraison" value={DELIVERY_LABELS[order.deliveryMode]} />
         {order.deliveryMode === "domicile" && (
           <Row label="Adresse" value={`${order.customer.address}, ${order.customer.city}`} />
@@ -85,6 +85,14 @@ export function ConfirmationPageClient({ orderId }: { orderId: string }) {
           })}
         />
       </div>
+
+      {hasDigitalItem && (
+        <div className="mt-6 rounded-xl bg-navy/5 p-4 text-sm text-navy">
+          {order.digitalDelivered
+            ? "Votre produit numérique a été envoyé par email 📩"
+            : `Votre commande contient un produit numérique : il sera envoyé à ${order.customer.email ?? "votre email"} dès la validation du paiement.`}
+        </div>
+      )}
 
       {!isPaid && waLink && (
         <a

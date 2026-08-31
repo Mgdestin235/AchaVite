@@ -20,6 +20,7 @@ export default function CheckoutPage() {
   const products = useShopStore((s) => s.products);
   const promos = useShopStore((s) => s.promos);
   const zones = useShopStore((s) => s.zones);
+  const paymentMethods = useShopStore((s) => s.settings.paymentMethods);
   const createOrder = useShopStore((s) => s.createOrder);
   const currentCustomer = useAuthStore((s) => s.currentCustomer());
 
@@ -33,11 +34,14 @@ export default function CheckoutPage() {
 
   const [name, setName] = useState(currentCustomer?.name ?? "");
   const [phone, setPhone] = useState(currentCustomer?.phone ?? "");
+  const [email, setEmail] = useState("");
   const [city, setCity] = useState(zones[0]?.city ?? "");
   const [address, setAddress] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [mode, setMode] = useState<DeliveryMode>("domicile");
   const [relaisPoint, setRelaisPoint] = useState("");
+
+  const hasDigitalItem = items.some((i) => i.product.files.length > 0);
 
   const subtotal = items.reduce((s, i) => s + i.product.price * i.line.qty, 0);
   const activePromo = promos.find(
@@ -81,11 +85,16 @@ export default function CheckoutPage() {
       toast.error("Merci de choisir un point relais.");
       return;
     }
+    if (hasDigitalItem && !email.trim()) {
+      toast.error("Votre commande contient un produit numérique : merci de renseigner votre email pour le recevoir.");
+      return;
+    }
 
     const order = createOrder({
       customer: {
         name: name.trim(),
         phone: phone.trim(),
+        email: email.trim() || undefined,
         city,
         address: mode === "domicile" ? address.trim() : "",
         neighborhood: neighborhood.trim() || undefined,
@@ -105,7 +114,9 @@ export default function CheckoutPage() {
       total,
       deliveryMode: mode,
       relaisPoint: mode === "relais" ? relaisPoint : undefined,
-      paymentMethod: "whatsapp",
+      paymentMethod:
+        (["mtn", "airtel", "moov", "banque"] as const).find((m) => paymentMethods[m].enabled) ??
+        "mtn",
     });
 
     clearCart();
@@ -134,6 +145,19 @@ export default function CheckoutPage() {
                 type="tel"
                 className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange sm:col-span-2"
               />
+              <input
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={hasDigitalItem ? "Email (obligatoire pour le produit numérique)" : "Email (optionnel)"}
+                type="email"
+                className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange sm:col-span-2"
+              />
+              {hasDigitalItem && (
+                <p className="text-xs text-orange-dark sm:col-span-2">
+                  Votre commande contient un produit numérique : il vous sera envoyé par email
+                  après validation du paiement.
+                </p>
+              )}
               {!currentCustomer && (
                 <p className="text-xs text-gray-400 sm:col-span-2">
                   Pas besoin de créer un compte : votre numéro suffit pour suivre votre commande.
