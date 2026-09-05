@@ -38,24 +38,3 @@ export const useAuthStore = create<AuthState>()(
     { name: "achavite-auth" }
   )
 );
-
-type AdminAuthState = {
-  isAuthed: boolean;
-  login: (password: string) => boolean;
-  logout: () => void;
-};
-
-export const useAdminAuthStore = create<AdminAuthState>()(
-  persist(
-    (set) => ({
-      isAuthed: false,
-      login: (password) => {
-        const ok = password === "achavite2026";
-        if (ok) set({ isAuthed: true });
-        return ok;
-      },
-      logout: () => set({ isAuthed: false }),
-    }),
-    { name: "achavite-admin-auth" }
-  )
-);

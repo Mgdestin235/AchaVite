@@ -15,7 +15,7 @@ import {
   ExternalLink,
   Settings,
 } from "lucide-react";
-import { useAdminAuthStore } from "@/lib/store/auth";
+import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 
 const NAV = [
@@ -28,10 +28,15 @@ const NAV = [
   { href: "/admin/parametres", label: "Paramètres", icon: Settings },
 ];
 
-function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
+function AdminSidebar({ email, onNavigate }: { email: string; onNavigate?: () => void }) {
   const pathname = usePathname();
-  const logout = useAdminAuthStore((s) => s.logout);
   const router = useRouter();
+  const supabase = createClient();
+
+  async function handleLogout() {
+    await supabase.auth.signOut();
+    router.push("/admin/connexion");
+  }
 
   return (
     <div className="flex h-full flex-col bg-navy text-white">
@@ -61,6 +66,7 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
         })}
       </nav>
       <div className="space-y-1 border-t border-white/10 p-3">
+        {email && <p className="truncate px-3 py-1 text-[11px] text-white/40">{email}</p>}
         <Link
           href="/"
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white"
@@ -69,10 +75,7 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
           Voir la boutique
         </Link>
         <button
-          onClick={() => {
-            logout();
-            router.push("/admin");
-          }}
+          onClick={handleLogout}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white"
         >
           <LogOut size={18} />
@@ -83,59 +86,14 @@ function AdminSidebar({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
-function AdminLoginGate() {
-  const login = useAdminAuthStore((s) => s.login);
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!login(password)) {
-      setError("Mot de passe incorrect.");
-      return;
-    }
-    setError("");
-  }
-
-  return (
-    <div className="flex min-h-[70vh] items-center justify-center px-4">
-      <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-2xl bg-white p-6 ring-1 ring-black/5">
-        <div className="mb-4 flex flex-col items-center gap-2 text-center">
-          <Image src="/brand/logo-full.png" alt="AchaVite" width={140} height={107} className="h-12 w-auto" />
-          <p className="text-sm font-bold text-navy">Espace administrateur</p>
-        </div>
-        <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          type="password"
-          placeholder="Mot de passe administrateur"
-          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
-        />
-        {error && <p className="mt-2 text-xs font-medium text-red-500">{error}</p>}
-        <button className="mt-4 w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark">
-          Se connecter
-        </button>
-        <p className="mt-3 text-center text-[11px] text-gray-400">
-          Accès démo : achavite2026
-        </p>
-      </form>
-    </div>
-  );
-}
-
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const isAuthed = useAdminAuthStore((s) => s.isAuthed);
+export function AdminShell({ email, children }: { email: string; children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
-
-  if (!isAuthed) {
-    return <AdminLoginGate />;
-  }
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <aside className="hidden w-64 shrink-0 lg:block">
         <div className="sticky top-0 h-screen">
-          <AdminSidebar />
+          <AdminSidebar email={email} />
         </div>
       </aside>
 
@@ -143,7 +101,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
           <div className="absolute left-0 top-0 h-full w-64">
-            <AdminSidebar onNavigate={() => setMobileOpen(false)} />
+            <AdminSidebar email={email} onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
       )}
