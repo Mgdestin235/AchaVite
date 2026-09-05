@@ -56,6 +56,7 @@ export function Footer() {
             <li><Link href="/confidentialite" className="hover:text-orange">Politique de confidentialité</Link></li>
             <li><Link href="/faq#livraison" className="hover:text-orange">Politique de livraison</Link></li>
             <li><Link href="/faq#retours" className="hover:text-orange">Politique de retour</Link></li>
+            <li><Link href="/admin" className="hover:text-orange">Espace administrateur</Link></li>
           </ul>
         </div>
       </div>
