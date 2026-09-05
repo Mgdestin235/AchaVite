@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { MfaEnroll } from "@/components/admin/MfaEnroll";
+import { resolveRoleRedirect } from "@/lib/db/redirectForRole";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +20,20 @@ export default function AdminLoginPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  async function redirectAfterAuth() {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    const result = await resolveRoleRedirect(supabase, user.id);
+    if ("error" in result) {
+      setError(result.error);
+      await supabase.auth.signOut();
+      return;
+    }
+    router.push(result.path);
+  }
 
   async function handlePasswordSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,7 +52,7 @@ export default function AdminLoginPage() {
         return;
       }
       if (aal?.nextLevel === "aal2" && aal.currentLevel === "aal2") {
-        router.push("/admin");
+        await redirectAfterAuth();
         return;
       }
       // No MFA factor enrolled yet (shouldn't normally happen): enforce it now.
@@ -65,7 +80,7 @@ export default function AdminLoginPage() {
         setError("Code incorrect. Réessayez.");
         return;
       }
-      router.push("/admin");
+      await redirectAfterAuth();
     } finally {
       setLoading(false);
     }
@@ -74,7 +89,7 @@ export default function AdminLoginPage() {
   if (step === "mfa-setup") {
     return (
       <div className="flex min-h-[70vh] items-center justify-center px-4">
-        <MfaEnroll onDone={() => router.push("/admin")} />
+        <MfaEnroll onDone={redirectAfterAuth} />
       </div>
     );
   }
@@ -115,7 +130,7 @@ export default function AdminLoginPage() {
       <form onSubmit={handlePasswordSubmit} className="w-full max-w-sm rounded-2xl bg-white p-6 ring-1 ring-black/5">
         <div className="mb-4 flex flex-col items-center gap-2 text-center">
           <Image src="/brand/logo-full.png" alt="AchaVite" width={140} height={107} className="h-12 w-auto" />
-          <p className="text-sm font-bold text-navy">Espace administrateur</p>
+          <p className="text-sm font-bold text-navy">Connexion Vendeur / Administrateur</p>
         </div>
         <div className="space-y-3">
           <input
@@ -145,7 +160,7 @@ export default function AdminLoginPage() {
         <p className="mt-4 text-center text-sm text-gray-500">
           Pas encore de compte ?{" "}
           <Link href="/admin/inscription" className="font-semibold text-orange">
-            Créer un compte administrateur
+            Devenir vendeur
           </Link>
         </p>
       </form>

@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import { AdminShell } from "./AdminShell";
+import { SuperAdminShell } from "./SuperAdminShell";
 
-export default async function ProtectedAdminLayout({ children }: { children: React.ReactNode }) {
+export default async function SuperAdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
 
   const {
@@ -23,12 +23,12 @@ export default async function ProtectedAdminLayout({ children }: { children: Rea
     .eq("id", user.id)
     .maybeSingle();
 
-  if (profile?.role === "super_admin") {
-    redirect("/super-admin");
+  if (profile?.role === "vendor") {
+    redirect("/admin");
   }
-  if (profile?.role !== "vendor") {
+  if (profile?.role !== "super_admin") {
     redirect("/admin/connexion");
   }
 
-  return <AdminShell email={user.email ?? ""}>{children}</AdminShell>;
+  return <SuperAdminShell email={user.email ?? ""}>{children}</SuperAdminShell>;
 }

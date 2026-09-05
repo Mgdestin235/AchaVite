@@ -7,30 +7,29 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Store,
+  Users,
   Package,
   ShoppingBag,
-  BadgePercent,
-  Truck,
+  Percent,
+  Tags,
   LogOut,
   Menu,
   ExternalLink,
-  Settings,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
 
 const NAV = [
-  { href: "/admin", label: "Tableau de bord", icon: LayoutDashboard, exact: true },
-  { href: "/admin/store", label: "Ma boutique", icon: Store },
-  { href: "/admin/produits", label: "Produits", icon: Package },
-  { href: "/admin/commandes", label: "Commandes", icon: ShoppingBag },
-  { href: "/admin/stock", label: "Stock", icon: Package },
-  { href: "/admin/promotions", label: "Promotions", icon: BadgePercent },
-  { href: "/admin/livraison", label: "Livraison", icon: Truck },
-  { href: "/admin/parametres", label: "Paramètres", icon: Settings },
+  { href: "/super-admin", label: "Tableau de bord", icon: LayoutDashboard, exact: true },
+  { href: "/super-admin/stores", label: "Boutiques", icon: Store },
+  { href: "/super-admin/users", label: "Utilisateurs", icon: Users },
+  { href: "/super-admin/products", label: "Produits", icon: Package },
+  { href: "/super-admin/orders", label: "Commandes", icon: ShoppingBag },
+  { href: "/super-admin/commissions", label: "Commissions", icon: Percent },
+  { href: "/super-admin/categories", label: "Catégories", icon: Tags },
 ];
 
-function AdminSidebar({ email, onNavigate }: { email: string; onNavigate?: () => void }) {
+function Sidebar({ email, onNavigate }: { email: string; onNavigate?: () => void }) {
   const pathname = usePathname();
   const router = useRouter();
   const supabase = createClient();
@@ -46,7 +45,7 @@ function AdminSidebar({ email, onNavigate }: { email: string; onNavigate?: () =>
         <span className="inline-flex rounded-lg bg-white px-2 py-1.5">
           <Image src="/brand/logo-full.png" alt="AchaVite" width={140} height={107} className="h-8 w-auto" />
         </span>
-        <p className="text-[11px] text-white/50">Administration</p>
+        <p className="rounded bg-orange px-1.5 py-0.5 text-[10px] font-bold text-white">SUPER ADMIN</p>
       </div>
       <nav className="flex-1 space-y-1 px-3">
         {NAV.map((item) => {
@@ -88,14 +87,14 @@ function AdminSidebar({ email, onNavigate }: { email: string; onNavigate?: () =>
   );
 }
 
-export function AdminShell({ email, children }: { email: string; children: React.ReactNode }) {
+export function SuperAdminShell({ email, children }: { email: string; children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
     <div className="flex min-h-screen bg-gray-50">
       <aside className="hidden w-64 shrink-0 lg:block">
         <div className="sticky top-0 h-screen">
-          <AdminSidebar email={email} />
+          <Sidebar email={email} />
         </div>
       </aside>
 
@@ -103,7 +102,7 @@ export function AdminShell({ email, children }: { email: string; children: React
         <div className="fixed inset-0 z-50 lg:hidden">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMobileOpen(false)} />
           <div className="absolute left-0 top-0 h-full w-64">
-            <AdminSidebar email={email} onNavigate={() => setMobileOpen(false)} />
+            <Sidebar email={email} onNavigate={() => setMobileOpen(false)} />
           </div>
         </div>
       )}
@@ -113,7 +112,7 @@ export function AdminShell({ email, children }: { email: string; children: React
           <button onClick={() => setMobileOpen(true)} className="text-navy">
             <Menu size={22} />
           </button>
-          <span className="text-sm font-bold text-navy">Administration AchaVite</span>
+          <span className="text-sm font-bold text-navy">Super Admin AchaVite</span>
         </div>
         <div className="p-4 sm:p-6">{children}</div>
       </div>

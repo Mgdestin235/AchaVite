@@ -5,23 +5,14 @@ type RegisterBody = {
   name?: string;
   email?: string;
   password?: string;
-  inviteCode?: string;
 };
 
+// Vendor self-registration: anyone can create a vendor account (they still
+// need Super Admin approval before their store goes live -- see
+// stores.status in the schema), so no invite code is required here.
 export async function POST(request: Request): Promise<NextResponse> {
-  const inviteSecret = process.env.ADMIN_INVITE_CODE;
-  if (!inviteSecret) {
-    return NextResponse.json(
-      { error: "L'inscription administrateur n'est pas encore configurée." },
-      { status: 503 }
-    );
-  }
+  const { name, email, password } = (await request.json()) as RegisterBody;
 
-  const { name, email, password, inviteCode } = (await request.json()) as RegisterBody;
-
-  if (inviteCode !== inviteSecret) {
-    return NextResponse.json({ error: "Code d'invitation invalide." }, { status: 403 });
-  }
   if (!email || !password || password.length < 8) {
     return NextResponse.json(
       { error: "Email et mot de passe (8 caractères minimum) requis." },
@@ -34,7 +25,7 @@ export async function POST(request: Request): Promise<NextResponse> {
     email,
     password,
     email_confirm: true,
-    user_metadata: { name: name?.trim() || undefined },
+    user_metadata: { name: name?.trim() || undefined, role: "vendor" },
   });
 
   if (error) {

@@ -10,7 +10,7 @@ import { MfaEnroll } from "@/components/admin/MfaEnroll";
 
 export const dynamic = "force-dynamic";
 
-export default function AdminRegisterPage() {
+export default function VendorRegisterPage() {
   const router = useRouter();
   const supabase = createClient();
 
@@ -19,7 +19,6 @@ export default function AdminRegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
-  const [inviteCode, setInviteCode] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -41,7 +40,7 @@ export default function AdminRegisterPage() {
       const res = await fetch("/api/admin/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, email, password, inviteCode }),
+        body: JSON.stringify({ name, email, password }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -66,8 +65,8 @@ export default function AdminRegisterPage() {
       <div className="flex min-h-[70vh] items-center justify-center px-4">
         <MfaEnroll
           onDone={() => {
-            toast.success("Compte administrateur créé avec succès");
-            router.push("/admin");
+            toast.success("Compte vendeur créé avec succès");
+            router.push("/admin/store");
           }}
         />
       </div>
@@ -79,7 +78,11 @@ export default function AdminRegisterPage() {
       <form onSubmit={handleSubmit} className="w-full max-w-sm rounded-2xl bg-white p-6 ring-1 ring-black/5">
         <div className="mb-4 flex flex-col items-center gap-2 text-center">
           <Image src="/brand/logo-full.png" alt="AchaVite" width={140} height={107} className="h-12 w-auto" />
-          <p className="text-sm font-bold text-navy">Créer un compte administrateur</p>
+          <p className="text-sm font-bold text-navy">Devenir vendeur sur AchaVite</p>
+          <p className="text-xs text-gray-500">
+            Créez votre compte, puis votre boutique. Elle sera visible dès validation par
+            l&apos;équipe AchaVite.
+          </p>
         </div>
 
         <div className="space-y-3">
@@ -111,13 +114,6 @@ export default function AdminRegisterPage() {
             type="password"
             required
             placeholder="Confirmer le mot de passe"
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
-          />
-          <input
-            value={inviteCode}
-            onChange={(e) => setInviteCode(e.target.value)}
-            required
-            placeholder="Code d'invitation"
             className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
           />
         </div>

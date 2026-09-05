@@ -1,0 +1,263 @@
+"use client";
+
+import { useState } from "react";
+import Image from "next/image";
+import { useRouter } from "next/navigation";
+import { Loader2, Store as StoreIcon, ImagePlus } from "lucide-react";
+import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
+import { uploadFile } from "@/lib/uploadClient";
+import { slugify } from "@/lib/format";
+import type { Store } from "@/lib/db/types";
+import { cn } from "@/lib/cn";
+
+const STATUS_LABELS: Record<Store["status"], { label: string; className: string }> = {
+  pending: { label: "En attente de validation", className: "bg-yellow-100 text-yellow-700" },
+  approved: { label: "Approuvée — visible sur AchaVite", className: "bg-green-100 text-green-700" },
+  rejected: { label: "Refusée", className: "bg-red-100 text-red-600" },
+  suspended: { label: "Suspendue", className: "bg-gray-100 text-gray-500" },
+};
+
+export function StoreForm({
+  store,
+  categories,
+}: {
+  store: Store | null;
+  categories: { id: string; name: string; slug: string }[];
+}) {
+  const router = useRouter();
+  const supabase = createClient();
+
+  const [name, setName] = useState(store?.name ?? "");
+  const [description, setDescription] = useState(store?.description ?? "");
+  const [phone, setPhone] = useState(store?.phone ?? "");
+  const [whatsapp, setWhatsapp] = useState(store?.whatsapp_number ?? "");
+  const [address, setAddress] = useState(store?.address ?? "");
+  const [city, setCity] = useState(store?.city ?? "");
+  const [categoryId, setCategoryId] = useState(store?.category_id ?? categories[0]?.id ?? "");
+  const [openingHours, setOpeningHours] = useState(store?.opening_hours ?? "");
+  const [deliveryInfo, setDeliveryInfo] = useState(store?.delivery_info ?? "");
+  const [logoUrl, setLogoUrl] = useState(store?.logo_url ?? "");
+  const [bannerUrl, setBannerUrl] = useState(store?.banner_url ?? "");
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function handleImageUpload(file: File, kind: "logo" | "banner") {
+    const setUploading = kind === "logo" ? setUploadingLogo : setUploadingBanner;
+    const setUrl = kind === "logo" ? setLogoUrl : setBannerUrl;
+    setUploading(true);
+    try {
+      const url = await uploadFile(file, "image");
+      setUrl(url);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Échec du téléversement");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!name.trim()) {
+      toast.error("Le nom de la boutique est obligatoire.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) return;
+
+      if (store) {
+        const { error } = await supabase
+          .from("stores")
+          .update({
+            name: name.trim(),
+            description,
+            phone,
+            whatsapp_number: whatsapp,
+            address,
+            city,
+            category_id: categoryId || null,
+            opening_hours: openingHours,
+            delivery_info: deliveryInfo,
+            logo_url: logoUrl || null,
+            banner_url: bannerUrl || null,
+          })
+          .eq("id", store.id);
+        if (error) throw error;
+        toast.success("Boutique mise à jour");
+      } else {
+        const { error } = await supabase.from("stores").insert({
+          owner_id: user.id,
+          name: name.trim(),
+          slug: `${slugify(name)}-${user.id.slice(0, 6)}`,
+          description,
+          phone,
+          whatsapp_number: whatsapp,
+          address,
+          city,
+          category_id: categoryId || null,
+          opening_hours: openingHours,
+          delivery_info: deliveryInfo,
+          logo_url: logoUrl || null,
+          banner_url: bannerUrl || null,
+          status: "pending",
+        });
+        if (error) throw error;
+        toast.success("Boutique créée ! Elle est en attente de validation par l'équipe AchaVite.");
+      }
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Une erreur est survenue");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="max-w-2xl space-y-5">
+      {store && (
+        <span
+          className={cn(
+            "inline-block rounded-full px-3 py-1 text-xs font-semibold",
+            STATUS_LABELS[store.status].className
+          )}
+        >
+          {STATUS_LABELS[store.status].label}
+        </span>
+      )}
+
+      <div className="rounded-xl bg-white p-4 ring-1 ring-black/5 sm:p-5">
+        <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Identité de la boutique</p>
+
+        <div className="mb-4 grid gap-3 sm:grid-cols-2">
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-gray-500">Logo</label>
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100 ring-1 ring-black/5">
+                {logoUrl ? (
+                  <Image src={logoUrl} alt="Logo" fill className="object-cover" />
+                ) : (
+                  <StoreIcon size={22} className="text-gray-300" />
+                )}
+              </div>
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-navy hover:border-orange">
+                {uploadingLogo ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}
+                Choisir
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], "logo")}
+                />
+              </label>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-xs font-medium text-gray-500">Bannière</label>
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-16 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-100 ring-1 ring-black/5">
+                {bannerUrl ? (
+                  <Image src={bannerUrl} alt="Bannière" fill className="object-cover" />
+                ) : (
+                  <ImagePlus size={22} className="text-gray-300" />
+                )}
+              </div>
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-navy hover:border-orange">
+                {uploadingBanner ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />}
+                Choisir
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => e.target.files?.[0] && handleImageUpload(e.target.files[0], "banner")}
+                />
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <div className="space-y-3">
+          <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            placeholder="Nom de la boutique"
+            required
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+          />
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Description de la boutique"
+            rows={3}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+          />
+          <select
+            value={categoryId}
+            onChange={(e) => setCategoryId(e.target.value)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+          >
+            <option value="">Catégorie principale</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="rounded-xl bg-white p-4 ring-1 ring-black/5 sm:p-5">
+        <p className="mb-3 text-xs font-semibold uppercase text-gray-400">Contact & localisation</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            placeholder="Téléphone"
+            className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+          />
+          <input
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder="Numéro WhatsApp"
+            className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+          />
+          <input
+            value={city}
+            onChange={(e) => setCity(e.target.value)}
+            placeholder="Ville"
+            className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+          />
+          <input
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Adresse"
+            className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+          />
+          <input
+            value={openingHours}
+            onChange={(e) => setOpeningHours(e.target.value)}
+            placeholder="Horaires (ex: Lun-Sam 8h-18h)"
+            className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange sm:col-span-2"
+          />
+          <textarea
+            value={deliveryInfo}
+            onChange={(e) => setDeliveryInfo(e.target.value)}
+            placeholder="Informations de livraison"
+            rows={2}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange sm:col-span-2"
+          />
+        </div>
+      </div>
+
+      <button
+        disabled={saving}
+        className="w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark disabled:opacity-50"
+      >
+        {saving ? "Enregistrement..." : store ? "Mettre à jour la boutique" : "Créer ma boutique"}
+      </button>
+    </form>
+  );
+}
