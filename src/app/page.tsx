@@ -1,30 +1,19 @@
-"use client";
-
-import { useMemo } from "react";
-import { useShopStore } from "@/lib/store/shop";
+import { createClient } from "@/lib/supabase/server";
+import { listPublicProducts, toLegacyProduct } from "@/lib/db/products";
 import { Hero } from "@/components/home/Hero";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { ProductSection } from "@/components/home/ProductSection";
 
-export default function HomePage() {
-  const products = useShopStore((s) => s.products);
+export default async function HomePage() {
+  const supabase = await createClient();
+  const rows = await listPublicProducts(supabase);
+  const active = rows.map(toLegacyProduct);
 
-  const active = useMemo(() => products.filter((p) => p.active), [products]);
-  const promoProducts = useMemo(
-    () => active.filter((p) => p.oldPrice && p.oldPrice > p.price).slice(0, 10),
-    [active]
-  );
-  const popular = useMemo(
-    () => [...active].sort((a, b) => b.sold - a.sold).slice(0, 10),
-    [active]
-  );
-  const newest = useMemo(
-    () =>
-      [...active]
-        .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-        .slice(0, 10),
-    [active]
-  );
+  const promoProducts = active.filter((p) => p.oldPrice && p.oldPrice > p.price).slice(0, 10);
+  const popular = [...active].sort((a, b) => b.sold - a.sold).slice(0, 10);
+  const newest = [...active]
+    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
+    .slice(0, 10);
 
   return (
     <div>

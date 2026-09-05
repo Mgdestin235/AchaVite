@@ -1,16 +1,20 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useShopStore } from "@/lib/store/shop";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { listPublicProducts, toLegacyProduct } from "@/lib/db/products";
 import { CATEGORIES } from "@/lib/data";
 import { filterAndSortProducts } from "@/lib/filter";
 import { FilterBar, type Filters } from "@/components/product/FilterSort";
 import { ProductCard } from "@/components/product/ProductCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import type { Product } from "@/lib/types";
 
 export function CategoryPageClient({ slug }: { slug: string }) {
-  const products = useShopStore((s) => s.products);
+  const supabase = createClient();
   const category = CATEGORIES.find((c) => c.slug === slug)!;
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [filters, setFilters] = useState<Filters>({
     category: slug,
@@ -19,10 +23,20 @@ export function CategoryPageClient({ slug }: { slug: string }) {
     onlyStock: false,
   });
 
-  const results = useMemo(
-    () => filterAndSortProducts(products, { filters }),
-    [products, filters]
-  );
+  useEffect(() => {
+    let cancelled = false;
+    listPublicProducts(supabase).then((rows) => {
+      if (cancelled) return;
+      setProducts(rows.map(toLegacyProduct));
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const results = useMemo(() => filterAndSortProducts(products, { filters }), [products, filters]);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -33,7 +47,9 @@ export function CategoryPageClient({ slug }: { slug: string }) {
 
       <FilterBar filters={filters} onChange={setFilters} resultCount={results.length} />
 
-      {results.length === 0 ? (
+      {loading ? (
+        <p className="py-10 text-center text-sm text-gray-400">Chargement...</p>
+      ) : results.length === 0 ? (
         <EmptyState
           title="Aucun produit dans cette catégorie"
           description="Revenez bientôt, de nouveaux produits arrivent régulièrement."

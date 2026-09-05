@@ -2,15 +2,16 @@
 
 import { useState } from "react";
 import { X } from "lucide-react";
-import { CATEGORIES } from "@/lib/data";
 import { ImageUploadGrid } from "./ImageUploadGrid";
 import { VideoUploadField } from "./VideoUploadField";
 import { DocumentUploadList } from "./DocumentUploadList";
-import type { Product, ProductFile } from "@/lib/types";
+import type { ProductInput } from "@/lib/db/products";
+import type { ProductWithRelations } from "@/lib/db/products";
+import type { ProductFile } from "@/lib/types";
 
 type FormValues = {
   name: string;
-  category: string;
+  categoryId: string;
   price: string;
   oldPrice: string;
   stock: string;
@@ -18,55 +19,62 @@ type FormValues = {
   highlights: string;
   isNew: boolean;
   isBestSeller: boolean;
-  active: boolean;
+  status: "active" | "inactive";
   images: string[];
   videoUrl?: string;
   files: ProductFile[];
 };
 
-const EMPTY: FormValues = {
-  name: "",
-  category: CATEGORIES[0].slug,
-  price: "",
-  oldPrice: "",
-  stock: "0",
-  description: "",
-  highlights: "",
-  isNew: false,
-  isBestSeller: false,
-  active: true,
-  images: [],
-  videoUrl: undefined,
-  files: [],
-};
+function emptyValues(defaultCategoryId: string): FormValues {
+  return {
+    name: "",
+    categoryId: defaultCategoryId,
+    price: "",
+    oldPrice: "",
+    stock: "0",
+    description: "",
+    highlights: "",
+    isNew: false,
+    isBestSeller: false,
+    status: "active",
+    images: [],
+    videoUrl: undefined,
+    files: [],
+  };
+}
 
 export function ProductFormModal({
   product,
+  categories,
   onClose,
   onSave,
 }: {
-  product?: Product;
+  product?: ProductWithRelations;
+  categories: { id: string; name: string }[];
   onClose: () => void;
-  onSave: (values: Omit<Product, "id" | "slug" | "rating" | "reviews" | "sold" | "createdAt">) => void;
+  onSave: (values: ProductInput) => void;
 }) {
   const [values, setValues] = useState<FormValues>(() =>
     product
       ? {
           name: product.name,
-          category: product.category,
+          categoryId: product.category_id ?? categories[0]?.id ?? "",
           price: String(product.price),
-          oldPrice: product.oldPrice ? String(product.oldPrice) : "",
+          oldPrice: product.old_price ? String(product.old_price) : "",
           stock: String(product.stock),
-          description: product.description,
+          description: product.description ?? "",
           highlights: product.highlights.join("\n"),
-          isNew: product.isNew,
-          isBestSeller: product.isBestSeller,
-          active: product.active,
-          images: product.images,
-          videoUrl: product.videoUrl,
-          files: product.files,
+          isNew: product.is_new,
+          isBestSeller: product.is_best_seller,
+          status: product.status === "pending" ? "inactive" : product.status,
+          images: product.product_images
+            .slice()
+            .sort((a, b) => a.position - b.position)
+            .map((img) => img.url),
+          videoUrl: product.video_url ?? undefined,
+          files: product.product_files.map((f) => ({ id: f.id, name: f.name, url: f.url, kind: f.kind })),
         }
-      : EMPTY
+      : emptyValues(categories[0]?.id ?? "")
   );
 
   function handleSubmit(e: React.FormEvent) {
@@ -76,18 +84,18 @@ export function ProductFormModal({
 
     onSave({
       name: values.name.trim(),
-      category: values.category,
+      categoryId: values.categoryId || null,
       price: Number(values.price),
-      oldPrice: values.oldPrice ? Number(values.oldPrice) : undefined,
+      oldPrice: values.oldPrice ? Number(values.oldPrice) : null,
       stock: Number(values.stock) || 0,
       description: values.description.trim(),
       highlights: values.highlights.split("\n").map((h) => h.trim()).filter(Boolean),
       isNew: values.isNew,
       isBestSeller: values.isBestSeller,
-      active: values.active,
-      images: values.images,
+      status: values.status,
       videoUrl: values.videoUrl,
-      files: values.files,
+      images: values.images,
+      files: values.files.map((f) => ({ name: f.name, url: f.url, kind: f.kind })),
     });
   }
 
@@ -124,12 +132,12 @@ export function ProductFormModal({
           />
 
           <select
-            value={values.category}
-            onChange={(e) => setValues({ ...values, category: e.target.value })}
+            value={values.categoryId}
+            onChange={(e) => setValues({ ...values, categoryId: e.target.value })}
             className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
           >
-            {CATEGORIES.filter((c) => c.slug !== "offres").map((c) => (
-              <option key={c.slug} value={c.slug}>{c.name}</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
 
@@ -200,8 +208,8 @@ export function ProductFormModal({
             <label className="flex items-center gap-2 text-sm text-navy">
               <input
                 type="checkbox"
-                checked={values.active}
-                onChange={(e) => setValues({ ...values, active: e.target.checked })}
+                checked={values.status === "active"}
+                onChange={(e) => setValues({ ...values, status: e.target.checked ? "active" : "inactive" })}
                 className="h-4 w-4 accent-orange"
               />
               Actif (visible sur le site)

@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { useShopStore } from "@/lib/store/shop";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { listPublicProducts, toLegacyProduct } from "@/lib/db/products";
 import { filterAndSortProducts } from "@/lib/filter";
 import { FilterBar, type Filters, type SortKey } from "@/components/product/FilterSort";
 import { ProductCard } from "@/components/product/ProductCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import type { Product } from "@/lib/types";
 
 export function CataloguePageClient({
   query,
@@ -16,7 +18,9 @@ export function CataloguePageClient({
   initialSort: SortKey;
   initialCategory: string;
 }) {
-  const products = useShopStore((s) => s.products);
+  const supabase = createClient();
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [filters, setFilters] = useState<Filters>({
     category: initialCategory,
@@ -24,6 +28,19 @@ export function CataloguePageClient({
     onlyPromo: false,
     onlyStock: false,
   });
+
+  useEffect(() => {
+    let cancelled = false;
+    listPublicProducts(supabase).then((rows) => {
+      if (cancelled) return;
+      setProducts(rows.map(toLegacyProduct));
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const results = useMemo(
     () => filterAndSortProducts(products, { query, filters }),
@@ -41,7 +58,9 @@ export function CataloguePageClient({
 
       <FilterBar filters={filters} onChange={setFilters} resultCount={results.length} />
 
-      {results.length === 0 ? (
+      {loading ? (
+        <p className="py-10 text-center text-sm text-gray-400">Chargement...</p>
+      ) : results.length === 0 ? (
         <EmptyState
           title="Aucun produit trouvé"
           description="Essayez un autre mot-clé ou modifiez vos filtres."

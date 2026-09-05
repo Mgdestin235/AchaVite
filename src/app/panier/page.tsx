@@ -1,28 +1,60 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, Trash2, Tag, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/lib/store/cart";
-import { useShopStore } from "@/lib/store/shop";
+import { listPublicProductsByIds, type ProductWithRelations } from "@/lib/db/products";
+import { findActivePromoByCode } from "@/lib/db/promos";
 import { formatFCFA } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
+import type { PromoRow } from "@/lib/db/types";
 
 export default function CartPage() {
   const router = useRouter();
+  const supabase = createClient();
   const lines = useCartStore((s) => s.lines);
   const setQty = useCartStore((s) => s.setQty);
   const removeItem = useCartStore((s) => s.removeItem);
   const promoCode = useCartStore((s) => s.promoCode);
   const applyPromo = useCartStore((s) => s.applyPromo);
   const clearPromo = useCartStore((s) => s.clearPromo);
-  const products = useShopStore((s) => s.products);
-  const promos = useShopStore((s) => s.promos);
 
+  const [products, setProducts] = useState<ProductWithRelations[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [activePromo, setActivePromo] = useState<PromoRow | null>(null);
   const [promoInput, setPromoInput] = useState("");
+
+  const ids = useMemo(() => lines.map((l) => l.productId), [lines]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listPublicProductsByIds(supabase, ids).then((data) => {
+      if (cancelled) return;
+      setProducts(data);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids.join(",")]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const promise = promoCode ? findActivePromoByCode(supabase, promoCode) : Promise.resolve(null);
+    promise.then((promo) => {
+      if (!cancelled) setActivePromo(promo);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [promoCode]);
 
   const items = useMemo(
     () =>
@@ -32,28 +64,41 @@ export default function CartPage() {
     [lines, products]
   );
 
-  const subtotal = items.reduce((s, i) => s + i.product.price * i.line.qty, 0);
+  const subtotal = items.reduce((s, i) => s + Number(i.product.price) * i.line.qty, 0);
 
-  const activePromo = promos.find(
-    (p) => p.code.toLowerCase() === promoCode?.toLowerCase() && p.active
-  );
+  // A promo code belongs to one vendor's store — it only discounts that
+  // vendor's share of a (possibly multi-vendor) cart.
+  const promoStoreSubtotal = activePromo
+    ? items
+        .filter((i) => i.product.store_id === activePromo.store_id)
+        .reduce((s, i) => s + Number(i.product.price) * i.line.qty, 0)
+    : 0;
   const discount = activePromo
     ? activePromo.type === "percent"
-      ? Math.round((subtotal * activePromo.value) / 100)
-      : Math.min(activePromo.value, subtotal)
+      ? Math.round((promoStoreSubtotal * activePromo.value) / 100)
+      : Math.min(activePromo.value, promoStoreSubtotal)
     : 0;
 
-  function handleApplyPromo() {
+  async function handleApplyPromo() {
     const code = promoInput.trim();
     if (!code) return;
-    const found = promos.find((p) => p.code.toLowerCase() === code.toLowerCase() && p.active);
+    const found = await findActivePromoByCode(supabase, code);
     if (!found) {
       toast.error("Code promo invalide ou expiré");
       return;
     }
+    if (!items.some((i) => i.product.store_id === found.store_id)) {
+      toast.error("Ce code ne s'applique à aucun produit de votre panier.");
+      return;
+    }
     applyPromo(found.code);
+    setActivePromo(found);
     toast.success(`Code ${found.code} appliqué`);
     setPromoInput("");
+  }
+
+  if (loading) {
+    return <p className="py-20 text-center text-sm text-gray-400">Chargement...</p>;
   }
 
   if (items.length === 0) {
@@ -83,7 +128,9 @@ export default function CartPage() {
               className="flex gap-3 rounded-xl bg-white p-3 ring-1 ring-black/5 sm:gap-4 sm:p-4"
             >
               <Link href={`/produit/${product.slug}`} className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100 sm:h-24 sm:w-24">
-                <Image src={product.images[0]} alt={product.name} fill className="object-cover" />
+                {product.product_images[0] && (
+                  <Image src={product.product_images[0].url} alt={product.name} fill className="object-cover" />
+                )}
               </Link>
               <div className="flex flex-1 flex-col justify-between">
                 <div className="flex justify-between gap-2">
@@ -101,6 +148,9 @@ export default function CartPage() {
                     <Trash2 size={18} />
                   </button>
                 </div>
+                {product.stores && (
+                  <p className="text-xs text-gray-400">Vendu par {product.stores.name}</p>
+                )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center rounded-lg border border-gray-200">
                     <button
@@ -118,7 +168,7 @@ export default function CartPage() {
                     </button>
                   </div>
                   <span className="text-sm font-bold text-orange sm:text-base">
-                    {formatFCFA(product.price * line.qty)}
+                    {formatFCFA(Number(product.price) * line.qty)}
                   </span>
                 </div>
               </div>
@@ -151,7 +201,13 @@ export default function CartPage() {
               <span className="font-semibold text-orange-dark">
                 Code {activePromo.code} appliqué
               </span>
-              <button onClick={clearPromo} className="text-orange-dark underline">
+              <button
+                onClick={() => {
+                  clearPromo();
+                  setActivePromo(null);
+                }}
+                className="text-orange-dark underline"
+              >
                 Retirer
               </button>
             </div>

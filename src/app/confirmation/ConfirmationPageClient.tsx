@@ -1,11 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PartyPopper, MessageCircle, ArrowRight } from "lucide-react";
-import { useShopStore } from "@/lib/store/shop";
+import { loadLastOrder, type LastOrder } from "@/lib/lastOrder";
 import { formatFCFA } from "@/lib/format";
-import { buildOrderWhatsAppLink, PAYMENT_METHOD_LABELS } from "@/lib/whatsapp";
+import { PAYMENT_METHOD_LABELS } from "@/lib/whatsapp";
 import { EmptyState } from "@/components/ui/EmptyState";
 
 const DELIVERY_LABELS: Record<string, string> = {
@@ -15,29 +15,34 @@ const DELIVERY_LABELS: Record<string, string> = {
 };
 
 export function ConfirmationPageClient({ orderId }: { orderId: string }) {
-  const orders = useShopStore((s) => s.orders);
-  const products = useShopStore((s) => s.products);
-  const whatsappNumber = useShopStore((s) => s.settings.whatsappNumber);
-  const order = useMemo(() => orders.find((o) => o.id === orderId), [orders, orderId]);
+  const [order, setOrder] = useState<LastOrder | null | undefined>(undefined);
+
+  useEffect(() => {
+    // sessionStorage is a synchronous read, but setState still needs to
+    // happen from a callback rather than directly in the effect body.
+    Promise.resolve().then(() => setOrder(loadLastOrder(orderId)));
+  }, [orderId]);
+
+  if (order === undefined) {
+    return <p className="py-20 text-center text-sm text-gray-400">Chargement...</p>;
+  }
 
   if (!order) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16">
         <EmptyState
           title="Commande introuvable"
-          description="Nous ne trouvons pas cette commande."
-          actionLabel="Retour à l'accueil"
-          actionHref="/"
+          description="Nous ne trouvons pas cette commande sur cet appareil. Utilisez le suivi de commande."
+          actionLabel="Suivre ma commande"
+          actionHref="/suivi"
         />
       </div>
     );
   }
 
   const isPaid = order.paymentStatus === "reussi";
-  const waLink = buildOrderWhatsAppLink(order, whatsappNumber);
-  const hasDigitalItem = order.items.some(
-    (it) => (products.find((p) => p.id === it.productId)?.files.length ?? 0) > 0
-  );
+  const waLink = order.whatsappLink ?? null;
+  const hasDigitalItem = order.items.some((it) => it.hasFiles);
 
   return (
     <div className="mx-auto max-w-xl px-4 py-10 text-center sm:px-6">
@@ -48,7 +53,7 @@ export function ConfirmationPageClient({ orderId }: { orderId: string }) {
           </span>
           <h1 className="text-xl font-bold text-navy sm:text-2xl">Commande confirmée 🎉</h1>
           <p className="mt-2 text-sm text-gray-500">
-            Merci {order.customer.name.split(" ")[0]} ! Votre commande a été enregistrée avec
+            Merci {order.customerName.split(" ")[0]} ! Votre commande a été enregistrée avec
             succès.
           </p>
         </>
@@ -59,7 +64,7 @@ export function ConfirmationPageClient({ orderId }: { orderId: string }) {
           </span>
           <h1 className="text-xl font-bold text-navy sm:text-2xl">Commande enregistrée</h1>
           <p className="mt-2 text-sm text-gray-500">
-            Merci {order.customer.name.split(" ")[0]} ! Finalisez votre paiement dans la
+            Merci {order.customerName.split(" ")[0]} ! Finalisez votre paiement dans la
             conversation WhatsApp qui vient de s&apos;ouvrir pour confirmer votre commande.
           </p>
         </>
@@ -68,10 +73,12 @@ export function ConfirmationPageClient({ orderId }: { orderId: string }) {
       <div className="mt-6 space-y-3 rounded-xl bg-white p-5 text-left ring-1 ring-black/5">
         <Row label="Numéro de commande" value={order.code} />
         <Row label="Montant total" value={formatFCFA(order.total)} />
-        <Row label="Mode de paiement" value={PAYMENT_METHOD_LABELS[order.paymentMethod] ?? order.paymentMethod} />
+        {order.paymentMethod && (
+          <Row label="Mode de paiement" value={PAYMENT_METHOD_LABELS[order.paymentMethod]} />
+        )}
         <Row label="Mode de livraison" value={DELIVERY_LABELS[order.deliveryMode]} />
         {order.deliveryMode === "domicile" && (
-          <Row label="Adresse" value={`${order.customer.address}, ${order.customer.city}`} />
+          <Row label="Adresse" value={`${order.customerAddress ?? ""}, ${order.customerCity}`} />
         )}
         {order.deliveryMode === "relais" && order.relaisPoint && (
           <Row label="Point relais" value={order.relaisPoint} />
@@ -90,7 +97,7 @@ export function ConfirmationPageClient({ orderId }: { orderId: string }) {
         <div className="mt-6 rounded-xl bg-navy/5 p-4 text-sm text-navy">
           {order.digitalDelivered
             ? "Votre produit numérique a été envoyé par email 📩"
-            : `Votre commande contient un produit numérique : il sera envoyé à ${order.customer.email ?? "votre email"} dès la validation du paiement.`}
+            : `Votre commande contient un produit numérique : il sera envoyé à ${order.customerEmail ?? "votre email"} dès la validation du paiement.`}
         </div>
       )}
 

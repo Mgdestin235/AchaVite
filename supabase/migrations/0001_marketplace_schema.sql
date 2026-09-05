@@ -153,7 +153,7 @@ create table if not exists public.products (
   sold_count int not null default 0,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  unique(store_id, slug)
+  unique(slug)
 );
 create index if not exists products_store_idx on public.products(store_id);
 create index if not exists products_category_idx on public.products(category_id);
@@ -174,6 +174,25 @@ create table if not exists public.product_files (
   kind text not null check (kind in ('pdf', 'ebook'))
 );
 create index if not exists product_files_product_idx on public.product_files(product_id);
+
+-- Called from checkout (customer has no direct UPDATE grant on products;
+-- this lets stock decrement safely without opening broader write access).
+-- Also bumps sold_count and never lets stock go negative.
+create or replace function public.decrement_product_stock(p_product_id uuid, p_quantity int)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.products
+  set stock = greatest(stock - p_quantity, 0),
+      sold_count = sold_count + p_quantity
+  where id = p_product_id;
+end;
+$$;
+
+grant execute on function public.decrement_product_stock(uuid, int) to anon, authenticated;
 
 -- ---------------------------------------------------------------------------
 -- Delivery zones & promo codes (each vendor configures their own)
@@ -244,7 +263,11 @@ create table if not exists public.order_items (
   quantity int not null,
   subtotal numeric(12,2) not null,
   commission_amount numeric(12,2) not null default 0,
-  vendor_payout numeric(12,2) not null default 0
+  vendor_payout numeric(12,2) not null default 0,
+  -- Each vendor progresses their own portion of a multi-vendor order
+  -- independently (see resolveOrderStatus in the app for how the
+  -- customer-facing overall order status is derived from these).
+  status order_status not null default 'nouvelle'
 );
 create index if not exists order_items_order_idx on public.order_items(order_id);
 create index if not exists order_items_store_idx on public.order_items(store_id);
@@ -293,9 +316,25 @@ create index if not exists notifications_user_idx on public.notifications(user_i
 -- ---------------------------------------------------------------------------
 -- Platform-wide settings (commission rate, etc.) -- single row
 -- ---------------------------------------------------------------------------
+-- The platform (not individual vendors) collects payment: a customer's
+-- order total is paid to AchaVite, which keeps commission_percent and
+-- pays out the rest to each vendor. These are the platform's own
+-- payment-collection details, separate from a store's own contact
+-- WhatsApp number (stores.whatsapp_number, used for product questions).
 create table if not exists public.platform_settings (
   id int primary key default 1,
   commission_percent numeric(5,2) not null default 10,
+  whatsapp_number text,
+  mtn_enabled boolean not null default false,
+  mtn_number text,
+  airtel_enabled boolean not null default false,
+  airtel_number text,
+  moov_enabled boolean not null default false,
+  moov_number text,
+  bank_enabled boolean not null default false,
+  bank_name text,
+  bank_account_number text,
+  bank_account_holder text,
   check (id = 1)
 );
 insert into public.platform_settings (id) values (1) on conflict do nothing;
@@ -398,8 +437,14 @@ create policy "promos_write" on public.promos for all
 -- orders: the customer sees their own orders; super admin sees all; a
 -- vendor's access is scoped through order_items instead (an order can span
 -- multiple stores, so vendors never read the whole order row directly).
+-- Guest orders (customer_id is null) are deliberately NOT selectable here:
+-- exposing them via "customer_id is null" would let anyone list every
+-- guest order with a plain anon select. Guest order tracking instead goes
+-- through /api/orders/lookup and /api/orders/by-phone, which use the
+-- service-role key server-side and only return a row after matching the
+-- caller-supplied code and/or phone number.
 create policy "orders_select_customer_or_admin" on public.orders for select
-  using (customer_id = auth.uid() or public.current_role() = 'super_admin' or customer_id is null);
+  using (customer_id = auth.uid() or public.current_role() = 'super_admin');
 create policy "orders_insert_anyone" on public.orders for insert with check (true);
 create policy "orders_update_customer_or_admin" on public.orders for update
   using (customer_id = auth.uid() or public.current_role() = 'super_admin');
@@ -408,7 +453,7 @@ create policy "orders_update_customer_or_admin" on public.orders for update
 -- super admin.
 create policy "order_items_select" on public.order_items for select
   using (
-    exists (select 1 from public.orders o where o.id = order_id and (o.customer_id = auth.uid() or o.customer_id is null))
+    exists (select 1 from public.orders o where o.id = order_id and o.customer_id = auth.uid())
     or exists (select 1 from public.stores s where s.id = store_id and s.owner_id = auth.uid())
     or public.current_role() = 'super_admin'
   );
@@ -419,7 +464,7 @@ create policy "order_items_update_store_or_admin" on public.order_items for upda
 -- payments: same visibility as the parent order.
 create policy "payments_select" on public.payments for select
   using (
-    exists (select 1 from public.orders o where o.id = order_id and (o.customer_id = auth.uid() or o.customer_id is null))
+    exists (select 1 from public.orders o where o.id = order_id and o.customer_id = auth.uid())
     or public.current_role() = 'super_admin'
   );
 create policy "payments_insert_anyone" on public.payments for insert with check (true);

@@ -5,9 +5,11 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import { Search, X } from "lucide-react";
-import { useShopStore } from "@/lib/store/shop";
+import { createClient } from "@/lib/supabase/client";
+import { listPublicProducts, toLegacyProduct } from "@/lib/db/products";
 import { CATEGORIES } from "@/lib/data";
 import { formatFCFA } from "@/lib/format";
+import type { Product } from "@/lib/types";
 
 function normalize(s: string) {
   return s
@@ -18,10 +20,22 @@ function normalize(s: string) {
 
 export function SearchBar({ className = "" }: { className?: string }) {
   const router = useRouter();
-  const products = useShopStore((s) => s.products);
+  const supabase = createClient();
+  const [products, setProducts] = useState<Product[]>([]);
   const [query, setQuery] = useState("");
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    listPublicProducts(supabase).then((rows) => {
+      if (!cancelled) setProducts(rows.map(toLegacyProduct));
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -36,9 +50,7 @@ export function SearchBar({ className = "" }: { className?: string }) {
   const results = useMemo(() => {
     const q = normalize(query.trim());
     if (q.length < 1) return { products: [], categories: [] };
-    const matchedProducts = products
-      .filter((p) => p.active && normalize(p.name).includes(q))
-      .slice(0, 5);
+    const matchedProducts = products.filter((p) => normalize(p.name).includes(q)).slice(0, 5);
     const matchedCategories = CATEGORIES.filter((c) => normalize(c.name).includes(q));
     return { products: matchedProducts, categories: matchedCategories };
   }, [query, products]);

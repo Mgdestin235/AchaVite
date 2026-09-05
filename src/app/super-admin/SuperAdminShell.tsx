@@ -12,6 +12,7 @@ import {
   ShoppingBag,
   Percent,
   Tags,
+  CreditCard,
   LogOut,
   Menu,
   ExternalLink,
@@ -26,6 +27,7 @@ const NAV = [
   { href: "/super-admin/products", label: "Produits", icon: Package },
   { href: "/super-admin/orders", label: "Commandes", icon: ShoppingBag },
   { href: "/super-admin/commissions", label: "Commissions", icon: Percent },
+  { href: "/super-admin/paiements", label: "Paiements", icon: CreditCard },
   { href: "/super-admin/categories", label: "Catégories", icon: Tags },
 ];
 

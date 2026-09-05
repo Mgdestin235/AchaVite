@@ -1,30 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Search } from "lucide-react";
 import { useAuthStore } from "@/lib/store/auth";
-import { useShopStore } from "@/lib/store/shop";
+import { listOrdersByPhone, type OrderSummary } from "@/lib/orderLookup";
 import { formatFCFA } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { Order } from "@/lib/types";
+import type { OrderStatus } from "@/lib/db/types";
 import { cn } from "@/lib/cn";
 
-const STATUS_LABELS: Record<Order["status"], string> = {
+const STATUS_LABELS: Record<OrderStatus, string> = {
   nouvelle: "Nouvelle",
-  paiement_attente: "Paiement en attente",
-  payee: "Payée",
+  confirmee: "Confirmée",
   preparation: "En préparation",
   expediee: "Expédiée",
   livree: "Livrée",
   annulee: "Annulée",
 };
 
-const STATUS_COLORS: Record<Order["status"], string> = {
+const STATUS_COLORS: Record<OrderStatus, string> = {
   nouvelle: "bg-navy/10 text-navy",
-  paiement_attente: "bg-yellow-100 text-yellow-700",
-  payee: "bg-blue-100 text-blue-700",
+  confirmee: "bg-blue-100 text-blue-700",
   preparation: "bg-orange-light text-orange-dark",
   expediee: "bg-purple-100 text-purple-700",
   livree: "bg-green-100 text-green-700",
@@ -35,19 +33,28 @@ type Tab = "toutes" | "en-cours" | "livrees";
 
 export default function MyOrdersPage() {
   const currentCustomer = useAuthStore((s) => s.currentCustomer());
-  const orders = useShopStore((s) => s.orders);
   const [phoneQuery, setPhoneQuery] = useState("");
   const [lookupPhone, setLookupPhone] = useState<string | null>(null);
+  const [orders, setOrders] = useState<OrderSummary[]>([]);
+  const [loading, setLoading] = useState(false);
   const [tab, setTab] = useState<Tab>("toutes");
 
   const phone = currentCustomer?.phone ?? lookupPhone;
 
-  const myOrders = useMemo(() => {
-    if (!phone) return [];
-    return orders.filter((o) => o.customer.phone.replace(/\s/g, "").includes(phone.replace(/\s/g, "")));
-  }, [orders, phone]);
+  useEffect(() => {
+    if (!phone) return;
+    let cancelled = false;
+    listOrdersByPhone(phone).then(({ orders: data }) => {
+      if (cancelled) return;
+      setOrders(data);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [phone]);
 
-  const filtered = myOrders.filter((o) => {
+  const filtered = orders.filter((o) => {
     if (tab === "en-cours") return !["livree", "annulee"].includes(o.status);
     if (tab === "livrees") return o.status === "livree";
     return true;
@@ -110,7 +117,9 @@ export default function MyOrdersPage() {
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {loading ? (
+        <p className="py-10 text-center text-sm text-gray-400">Chargement...</p>
+      ) : filtered.length === 0 ? (
         <EmptyState
           title="Aucune commande ici"
           description="Vos commandes apparaîtront ici une fois passées."
@@ -132,15 +141,15 @@ export default function MyOrdersPage() {
                 </span>
               </div>
               <div className="mb-2 flex -space-x-2">
-                {order.items.slice(0, 4).map((it, i) => (
-                  <div key={i} className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-white bg-gray-100">
-                    <Image src={it.image} alt={it.name} fill className="object-cover" />
+                {order.order_items.slice(0, 4).map((it) => (
+                  <div key={it.id} className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-white bg-gray-100">
+                    {it.image && <Image src={it.image} alt={it.name} fill className="object-cover" />}
                   </div>
                 ))}
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-gray-400">
-                  {new Date(order.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                  {new Date(order.created_at).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
                 </span>
                 <span className="font-semibold text-navy">{formatFCFA(order.total)}</span>
               </div>

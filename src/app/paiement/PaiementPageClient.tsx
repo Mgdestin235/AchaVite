@@ -1,13 +1,14 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { MessageCircle, ShieldCheck, AlertTriangle, Landmark, Copy, Check } from "lucide-react";
-import { useShopStore } from "@/lib/store/shop";
+import { createClient } from "@/lib/supabase/client";
+import { loadLastOrder, updateLastOrder, type LastOrder } from "@/lib/lastOrder";
 import { formatFCFA } from "@/lib/format";
-import { buildOrderWhatsAppLink, PAYMENT_METHOD_LABELS } from "@/lib/whatsapp";
+import { buildOrderWhatsAppLink, PAYMENT_METHOD_LABELS, type PaymentMethodKey } from "@/lib/whatsapp";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { PaymentMethod } from "@/lib/types";
+import type { PlatformSettings } from "@/lib/db/types";
 import { cn } from "@/lib/cn";
 
 const MOBILE_COLORS: Record<string, string> = {
@@ -18,31 +19,65 @@ const MOBILE_COLORS: Record<string, string> = {
 
 export function PaiementPageClient({ orderId }: { orderId: string }) {
   const router = useRouter();
-  const orders = useShopStore((s) => s.orders);
-  const settings = useShopStore((s) => s.settings);
-  const setOrderPaymentStatus = useShopStore((s) => s.setOrderPaymentStatus);
-  const setOrderStatus = useShopStore((s) => s.setOrderStatus);
-
-  const order = useMemo(() => orders.find((o) => o.id === orderId), [orders, orderId]);
+  const supabase = createClient();
+  const [order, setOrder] = useState<LastOrder | null | undefined>(undefined);
+  const [settings, setSettings] = useState<PlatformSettings | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+  const [method, setMethod] = useState<PaymentMethodKey | null>(null);
 
-  const enabledMethods = (["mtn", "airtel", "moov", "banque"] as PaymentMethod[]).filter(
-    (m) => settings.paymentMethods[m].enabled
-  );
-  const [method, setMethod] = useState<PaymentMethod | null>(enabledMethods[0] ?? null);
+  useEffect(() => {
+    // sessionStorage is a synchronous read, but setState still needs to
+    // happen from a callback rather than directly in the effect body.
+    Promise.resolve().then(() => setOrder(loadLastOrder(orderId)));
+  }, [orderId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase
+      .from("platform_settings")
+      .select("*")
+      .eq("id", 1)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        const s = data as PlatformSettings | null;
+        setSettings(s);
+        if (s) {
+          const enabled = (["mtn", "airtel", "moov", "banque"] as PaymentMethodKey[]).find(
+            (m) => (m === "banque" ? s.bank_enabled : s[`${m}_enabled`])
+          );
+          setMethod(enabled ?? null);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  if (order === undefined || (order && !settings)) {
+    return <p className="py-20 text-center text-sm text-gray-400">Chargement...</p>;
+  }
 
   if (!order) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-16">
         <EmptyState
           title="Commande introuvable"
-          description="Cette commande n'existe pas ou a déjà été traitée."
-          actionLabel="Retour à l'accueil"
-          actionHref="/"
+          description="Cette commande n'existe pas ou la page a été rechargée depuis un autre appareil. Utilisez le suivi de commande."
+          actionLabel="Suivre ma commande"
+          actionHref="/suivi"
         />
       </div>
     );
   }
+
+  const enabledMethods = (["mtn", "airtel", "moov", "banque"] as PaymentMethodKey[]).filter((m) =>
+    m === "banque" ? settings!.bank_enabled : settings![`${m}_enabled`]
+  );
+
+  const methodNumber = (m: PaymentMethodKey): string =>
+    (m === "banque" ? settings!.bank_account_number : settings![`${m}_number`]) ?? "";
 
   function copy(value: string) {
     navigator.clipboard.writeText(value).then(() => {
@@ -51,17 +86,38 @@ export function PaiementPageClient({ orderId }: { orderId: string }) {
     });
   }
 
-  function handleContinue() {
-    if (!method) return;
-    const waLink = buildOrderWhatsAppLink({ ...order!, paymentMethod: method }, settings.whatsappNumber);
+  async function handleContinue() {
+    if (!method || !order) return;
+    const waLink = buildOrderWhatsAppLink(
+      {
+        code: order.code,
+        items: order.items.map((it) => ({ name: it.name, price: it.price, quantity: it.quantity })),
+        subtotal: order.subtotal,
+        discount: order.discount,
+        deliveryFee: order.deliveryFee,
+        total: order.total,
+        deliveryMode: order.deliveryMode,
+        customerName: order.customerName,
+        customerPhone: order.customerPhone,
+        customerCity: order.customerCity,
+        paymentMethod: method,
+      },
+      settings!.whatsapp_number
+    );
     if (!waLink) return;
-    setOrderPaymentStatus(order!.id, "attente", method);
-    setOrderStatus(order!.id, "paiement_attente");
+
+    await fetch("/api/orders/set-payment-method", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId: order.id, method }),
+    });
+    updateLastOrder({ paymentMethod: method, whatsappLink: waLink });
+
     window.open(waLink, "_blank", "noopener,noreferrer");
-    router.push(`/confirmation?commande=${order!.id}`);
+    router.push(`/confirmation?commande=${order.id}`);
   }
 
-  const waConfigured = !!buildOrderWhatsAppLink({ ...order, paymentMethod: method ?? "mtn" }, settings.whatsappNumber);
+  const waConfigured = !!settings!.whatsapp_number;
 
   return (
     <div className="mx-auto max-w-xl px-4 py-6 sm:px-6">
@@ -73,8 +129,7 @@ export function PaiementPageClient({ orderId }: { orderId: string }) {
       {enabledMethods.length === 0 ? (
         <div className="flex items-start gap-2 rounded-lg bg-yellow-50 p-3 text-xs text-yellow-800">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-          Aucun moyen de paiement n&apos;est encore configuré. Rendez-vous dans Admin →
-          Paramètres pour activer au moins un moyen de paiement.
+          Aucun moyen de paiement n&apos;est encore configuré par AchaVite. Réessayez plus tard.
         </div>
       ) : (
         <>
@@ -111,15 +166,9 @@ export function PaiementPageClient({ orderId }: { orderId: string }) {
                 {PAYMENT_METHOD_LABELS[method]} ci-dessous, puis confirmez sur WhatsApp.
               </p>
               <div className="mt-2 flex items-center justify-between rounded-lg bg-white px-3 py-2 ring-1 ring-black/5">
-                <span className="font-mono text-sm font-semibold text-navy">
-                  {settings.paymentMethods[method].number}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => copy(settings.paymentMethods[method].number)}
-                  className="text-gray-400 hover:text-navy"
-                >
-                  {copied === settings.paymentMethods[method].number ? <Check size={16} /> : <Copy size={16} />}
+                <span className="font-mono text-sm font-semibold text-navy">{methodNumber(method)}</span>
+                <button type="button" onClick={() => copy(methodNumber(method))} className="text-gray-400 hover:text-navy">
+                  {copied === methodNumber(method) ? <Check size={16} /> : <Copy size={16} />}
                 </button>
               </div>
             </div>
@@ -131,9 +180,9 @@ export function PaiementPageClient({ orderId }: { orderId: string }) {
                 Effectuez un virement de <span className="font-bold">{formatFCFA(order.total)}</span> vers
                 le compte ci-dessous, puis confirmez sur WhatsApp.
               </p>
-              <Row label="Banque" value={settings.paymentMethods.banque.bankName} onCopy={copy} copied={copied} />
-              <Row label="Compte" value={settings.paymentMethods.banque.accountNumber} onCopy={copy} copied={copied} />
-              <Row label="Titulaire" value={settings.paymentMethods.banque.accountHolder} onCopy={copy} copied={copied} />
+              <Row label="Banque" value={settings!.bank_name ?? ""} onCopy={copy} copied={copied} />
+              <Row label="Compte" value={settings!.bank_account_number ?? ""} onCopy={copy} copied={copied} />
+              <Row label="Titulaire" value={settings!.bank_account_holder ?? ""} onCopy={copy} copied={copied} />
             </div>
           )}
 
@@ -155,8 +204,7 @@ export function PaiementPageClient({ orderId }: { orderId: string }) {
           ) : (
             <div className="mt-5 flex items-start gap-2 rounded-lg bg-yellow-50 p-3 text-xs text-yellow-800">
               <AlertTriangle size={16} className="mt-0.5 shrink-0" />
-              Le numéro WhatsApp de confirmation n&apos;est pas encore configuré (Admin →
-              Paramètres).
+              Le numéro WhatsApp de confirmation n&apos;est pas encore configuré.
             </div>
           )}
         </>

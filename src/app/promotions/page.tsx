@@ -1,20 +1,14 @@
-"use client";
-
-import { useMemo } from "react";
-import { useShopStore } from "@/lib/store/shop";
+import { createClient } from "@/lib/supabase/server";
+import { listPublicProducts, toLegacyProduct } from "@/lib/db/products";
+import { listActivePromos } from "@/lib/db/promos";
 import { ProductCard } from "@/components/product/ProductCard";
 import { EmptyState } from "@/components/ui/EmptyState";
 
-export default function PromotionsPage() {
-  const products = useShopStore((s) => s.products);
-  const promos = useShopStore((s) => s.promos);
+export default async function PromotionsPage() {
+  const supabase = await createClient();
+  const [rows, activePromos] = await Promise.all([listPublicProducts(supabase), listActivePromos(supabase)]);
 
-  const promoProducts = useMemo(
-    () => products.filter((p) => p.active && p.oldPrice && p.oldPrice > p.price),
-    [products]
-  );
-
-  const activePromos = promos.filter((p) => p.active);
+  const promoProducts = rows.map(toLegacyProduct).filter((p) => p.oldPrice && p.oldPrice > p.price);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
@@ -26,10 +20,7 @@ export default function PromotionsPage() {
       {activePromos.length > 0 && (
         <div className="mb-6 flex flex-wrap gap-2">
           {activePromos.map((p) => (
-            <span
-              key={p.code}
-              className="rounded-lg bg-navy px-3 py-1.5 text-xs font-bold text-white"
-            >
+            <span key={p.id} className="rounded-lg bg-navy px-3 py-1.5 text-xs font-bold text-white">
               Code {p.code} : -{p.type === "percent" ? `${p.value}%` : `${p.value} FCFA`}
             </span>
           ))}

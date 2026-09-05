@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import { PRODUCTS } from "@/lib/data";
+import { createClient } from "@/lib/supabase/server";
+import { getPublicProductBySlug } from "@/lib/db/products";
 import { ProductPageClient } from "./ProductPageClient";
 
 export async function generateMetadata(props: PageProps<"/produit/[slug]">): Promise<Metadata> {
   const { slug } = await props.params;
-  const product = PRODUCTS.find((p) => p.slug === slug);
+  const supabase = await createClient();
+  const product = await getPublicProductBySlug(supabase, slug);
   if (!product) return { title: "Produit introuvable" };
   return {
     title: product.name,
-    description: product.description,
+    description: product.description ?? undefined,
     openGraph: {
       title: product.name,
-      description: product.description,
-      images: [product.images[0]],
+      description: product.description ?? undefined,
+      images: product.product_images[0] ? [product.product_images[0].url] : undefined,
     },
   };
 }

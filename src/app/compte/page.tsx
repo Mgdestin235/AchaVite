@@ -1,17 +1,29 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Package, MapPin, Bell, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { useAuthStore } from "@/lib/store/auth";
-import { useShopStore } from "@/lib/store/shop";
+import { listOrdersByPhone } from "@/lib/orderLookup";
 
 export default function AccountPage() {
   const router = useRouter();
   const currentCustomer = useAuthStore((s) => s.currentCustomer());
   const logout = useAuthStore((s) => s.logout);
-  const orders = useShopStore((s) => s.orders);
+  const [orderCount, setOrderCount] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!currentCustomer) return;
+    let cancelled = false;
+    listOrdersByPhone(currentCustomer.phone).then(({ orders }) => {
+      if (!cancelled) setOrderCount(orders.length);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentCustomer]);
 
   if (!currentCustomer) {
     return (
@@ -38,8 +50,6 @@ export default function AccountPage() {
       </div>
     );
   }
-
-  const myOrders = orders.filter((o) => o.customer.account === currentCustomer.phone);
 
   function handleLogout() {
     logout();
@@ -84,7 +94,9 @@ export default function AccountPage() {
       <div className="mt-6 rounded-xl bg-white p-5 ring-1 ring-black/5">
         <h2 className="mb-1 text-sm font-bold text-navy">Résumé</h2>
         <p className="text-sm text-gray-500">
-          Vous avez passé {myOrders.length} commande{myOrders.length > 1 ? "s" : ""} sur AchaVite.
+          {orderCount === null
+            ? "Chargement..."
+            : `Vous avez passé ${orderCount} commande${orderCount > 1 ? "s" : ""} sur AchaVite.`}
         </p>
       </div>
     </div>

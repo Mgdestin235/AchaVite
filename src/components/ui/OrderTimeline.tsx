@@ -1,34 +1,21 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, Package, CreditCard, Truck, Home } from "lucide-react";
-import type { OrderStatus } from "@/lib/types";
+import { Check, Package, ShieldCheck, Truck, Home } from "lucide-react";
+import type { OrderStatus } from "@/lib/db/types";
 import { cn } from "@/lib/cn";
 
 const STEPS = [
   { key: "nouvelle", label: "Commande reçue", icon: Package },
-  { key: "payee", label: "Paiement confirmé", icon: CreditCard },
+  { key: "confirmee", label: "Commande confirmée", icon: ShieldCheck },
   { key: "preparation", label: "Commande préparée", icon: Package },
   { key: "expediee", label: "Commande expédiée", icon: Truck },
   { key: "livree", label: "Commande livrée", icon: Home },
 ] as const;
 
 function stepIndex(status: OrderStatus): number {
-  switch (status) {
-    case "nouvelle":
-    case "paiement_attente":
-      return 0;
-    case "payee":
-      return 1;
-    case "preparation":
-      return 2;
-    case "expediee":
-      return 3;
-    case "livree":
-      return 4;
-    case "annulee":
-      return -1;
-  }
+  const i = STEPS.findIndex((s) => s.key === status);
+  return i;
 }
 
 export function OrderTimeline({ status }: { status: OrderStatus }) {

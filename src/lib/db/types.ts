@@ -144,6 +144,7 @@ export type OrderItemRow = {
   subtotal: number;
   commission_amount: number;
   vendor_payout: number;
+  status: OrderStatus;
 };
 
 export type ReviewRow = {
@@ -158,4 +159,15 @@ export type ReviewRow = {
 export type PlatformSettings = {
   id: 1;
   commission_percent: number;
+  whatsapp_number: string | null;
+  mtn_enabled: boolean;
+  mtn_number: string | null;
+  airtel_enabled: boolean;
+  airtel_number: string | null;
+  moov_enabled: boolean;
+  moov_number: string | null;
+  bank_enabled: boolean;
+  bank_name: string | null;
+  bank_account_number: string | null;
+  bank_account_holder: string | null;
 };

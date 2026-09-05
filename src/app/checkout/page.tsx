@@ -1,28 +1,40 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Home, Store, MapPinned } from "lucide-react";
 import { toast } from "sonner";
+import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/lib/store/cart";
-import { useShopStore } from "@/lib/store/shop";
 import { useAuthStore } from "@/lib/store/auth";
+import { listPublicProductsByIds, type ProductWithRelations } from "@/lib/db/products";
+import { listZonesForStores } from "@/lib/db/deliveryZones";
+import { findActivePromoByCode } from "@/lib/db/promos";
+import { createOrder } from "@/lib/db/orders";
+import { saveLastOrder } from "@/lib/lastOrder";
 import { formatFCFA } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
-import type { DeliveryMode } from "@/lib/types";
+import type { DeliveryMode } from "@/lib/db/types";
+import type { PromoRow } from "@/lib/db/types";
 import { cn } from "@/lib/cn";
 
 export default function CheckoutPage() {
   const router = useRouter();
+  const supabase = createClient();
   const lines = useCartStore((s) => s.lines);
   const promoCode = useCartStore((s) => s.promoCode);
   const clearCart = useCartStore((s) => s.clear);
-  const products = useShopStore((s) => s.products);
-  const promos = useShopStore((s) => s.promos);
-  const zones = useShopStore((s) => s.zones);
-  const paymentMethods = useShopStore((s) => s.settings.paymentMethods);
-  const createOrder = useShopStore((s) => s.createOrder);
+  const clearPromo = useCartStore((s) => s.clearPromo);
   const currentCustomer = useAuthStore((s) => s.currentCustomer());
+
+  const ids = useMemo(() => lines.map((l) => l.productId), [lines]);
+  const [products, setProducts] = useState<ProductWithRelations[]>([]);
+  const [zones, setZones] = useState<
+    { id: string; store_id: string; city: string; fee_domicile: number; fee_relais: number; has_relais: boolean; has_boutique: boolean; relais_points: string[] }[]
+  >([]);
+  const [activePromo, setActivePromo] = useState<PromoRow | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
   const items = useMemo(
     () =>
@@ -35,28 +47,74 @@ export default function CheckoutPage() {
   const [name, setName] = useState(currentCustomer?.name ?? "");
   const [phone, setPhone] = useState(currentCustomer?.phone ?? "");
   const [email, setEmail] = useState("");
-  const [city, setCity] = useState(zones[0]?.city ?? "");
+  const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [mode, setMode] = useState<DeliveryMode>("domicile");
   const [relaisPoint, setRelaisPoint] = useState("");
 
-  const hasDigitalItem = items.some((i) => i.product.files.length > 0);
+  useEffect(() => {
+    let cancelled = false;
+    listPublicProductsByIds(supabase, ids).then(async (rows) => {
+      if (cancelled) return;
+      setProducts(rows);
+      const storeIds = [...new Set(rows.map((p) => p.store_id))];
+      const zoneRows = await listZonesForStores(supabase, storeIds);
+      if (cancelled) return;
+      setZones(zoneRows);
+      if (zoneRows.length > 0) setCity((c) => c || zoneRows[0].city);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ids.join(",")]);
 
-  const subtotal = items.reduce((s, i) => s + i.product.price * i.line.qty, 0);
-  const activePromo = promos.find(
-    (p) => p.code.toLowerCase() === promoCode?.toLowerCase() && p.active
-  );
+  useEffect(() => {
+    let cancelled = false;
+    const promise = promoCode ? findActivePromoByCode(supabase, promoCode) : Promise.resolve(null);
+    promise.then((promo) => {
+      if (!cancelled) setActivePromo(promo);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [promoCode]);
+
+  const hasDigitalItem = items.some((i) => i.product.product_files.length > 0);
+  const subtotal = items.reduce((s, i) => s + Number(i.product.price) * i.line.qty, 0);
+
+  const promoStoreSubtotal = activePromo
+    ? items
+        .filter((i) => i.product.store_id === activePromo.store_id)
+        .reduce((s, i) => s + Number(i.product.price) * i.line.qty, 0)
+    : 0;
   const discount = activePromo
     ? activePromo.type === "percent"
-      ? Math.round((subtotal * activePromo.value) / 100)
-      : Math.min(activePromo.value, subtotal)
+      ? Math.round((promoStoreSubtotal * activePromo.value) / 100)
+      : Math.min(activePromo.value, promoStoreSubtotal)
     : 0;
 
-  const zone = zones.find((z) => z.city === city);
-  const deliveryFee =
-    !zone ? 0 : mode === "domicile" ? zone.feeDomicile : mode === "relais" ? zone.feeRelais : 0;
+  const cities = [...new Set(zones.map((z) => z.city))];
+  const zonesForCity = zones.filter((z) => z.city === city);
+  const relaisAvailable = zonesForCity.length > 0 && zonesForCity.every((z) => z.has_relais);
+  const boutiqueAvailable = zonesForCity.length > 0 && zonesForCity.every((z) => z.has_boutique);
+  const relaisPoints = [...new Set(zonesForCity.flatMap((z) => z.relais_points))];
+
+  const storeIdsInCart = [...new Set(items.map((i) => i.product.store_id))];
+  const deliveryFee = storeIdsInCart.reduce((sum, storeId) => {
+    const zone = zonesForCity.find((z) => z.store_id === storeId);
+    if (!zone) return sum;
+    return sum + (mode === "domicile" ? Number(zone.fee_domicile) : mode === "relais" ? Number(zone.fee_relais) : 0);
+  }, 0);
+
   const total = subtotal - discount + deliveryFee;
+
+  if (loading) {
+    return <p className="py-20 text-center text-sm text-gray-400">Chargement...</p>;
+  }
 
   if (items.length === 0) {
     return (
@@ -71,7 +129,7 @@ export default function CheckoutPage() {
     );
   }
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !phone.trim() || !city) {
       toast.error("Merci de renseigner votre nom, téléphone et ville.");
@@ -90,7 +148,8 @@ export default function CheckoutPage() {
       return;
     }
 
-    const order = createOrder({
+    setSubmitting(true);
+    const { order, error } = await createOrder(supabase, {
       customer: {
         name: name.trim(),
         phone: phone.trim(),
@@ -98,14 +157,14 @@ export default function CheckoutPage() {
         city,
         address: mode === "domicile" ? address.trim() : "",
         neighborhood: neighborhood.trim() || undefined,
-        account: currentCustomer?.phone,
       },
       items: items.map((i) => ({
         productId: i.product.id,
+        storeId: i.product.store_id,
         name: i.product.name,
-        image: i.product.images[0],
-        price: i.product.price,
-        qty: i.line.qty,
+        image: i.product.product_images[0]?.url ?? null,
+        price: Number(i.product.price),
+        quantity: i.line.qty,
       })),
       subtotal,
       discount,
@@ -114,12 +173,42 @@ export default function CheckoutPage() {
       total,
       deliveryMode: mode,
       relaisPoint: mode === "relais" ? relaisPoint : undefined,
-      paymentMethod:
-        (["mtn", "airtel", "moov", "banque"] as const).find((m) => paymentMethods[m].enabled) ??
-        "mtn",
+    });
+    setSubmitting(false);
+
+    if (error || !order) {
+      toast.error(error || "Une erreur est survenue lors de la création de la commande.");
+      return;
+    }
+
+    saveLastOrder({
+      id: order.id,
+      code: order.code,
+      subtotal,
+      discount,
+      deliveryFee,
+      total,
+      deliveryMode: mode,
+      relaisPoint: mode === "relais" ? relaisPoint : undefined,
+      customerName: name.trim(),
+      customerPhone: phone.trim(),
+      customerEmail: email.trim() || undefined,
+      customerCity: city,
+      customerAddress: mode === "domicile" ? address.trim() : undefined,
+      estimatedDelivery: order.estimated_delivery ?? new Date().toISOString(),
+      items: items.map((i) => ({
+        name: i.product.name,
+        image: i.product.product_images[0]?.url ?? null,
+        price: Number(i.product.price),
+        quantity: i.line.qty,
+        hasFiles: i.product.product_files.length > 0,
+      })),
+      paymentStatus: "attente",
+      digitalDelivered: false,
     });
 
     clearCart();
+    clearPromo();
     router.push(`/paiement?commande=${order.id}`);
   }
 
@@ -171,8 +260,8 @@ export default function CheckoutPage() {
             <div className="grid gap-2 sm:grid-cols-3">
               {[
                 { value: "domicile" as const, label: "À domicile", icon: Home },
-                { value: "relais" as const, label: "Point relais", icon: MapPinned, disabled: !zone?.hasRelais },
-                { value: "boutique" as const, label: "Retrait boutique", icon: Store, disabled: !zone?.hasBoutique },
+                { value: "relais" as const, label: "Point relais", icon: MapPinned, disabled: !relaisAvailable },
+                { value: "boutique" as const, label: "Retrait boutique", icon: Store, disabled: !boutiqueAvailable },
               ].map((opt) => (
                 <button
                   type="button"
@@ -191,15 +280,24 @@ export default function CheckoutPage() {
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <select
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
-              >
-                {zones.map((z) => (
-                  <option key={z.city} value={z.city}>{z.city}</option>
-                ))}
-              </select>
+              {cities.length > 0 ? (
+                <select
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+                >
+                  {cities.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Votre ville"
+                  className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+                />
+              )}
 
               {mode === "domicile" && (
                 <>
@@ -218,14 +316,14 @@ export default function CheckoutPage() {
                 </>
               )}
 
-              {mode === "relais" && zone && (
+              {mode === "relais" && relaisPoints.length > 0 && (
                 <select
                   value={relaisPoint}
                   onChange={(e) => setRelaisPoint(e.target.value)}
                   className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange sm:col-span-2"
                 >
                   <option value="">Choisir un point relais</option>
-                  {zone.relaisPoints.map((r) => (
+                  {relaisPoints.map((r) => (
                     <option key={r} value={r}>{r}</option>
                   ))}
                 </select>
@@ -241,7 +339,7 @@ export default function CheckoutPage() {
               <li key={product.id} className="flex justify-between gap-2 text-gray-600">
                 <span className="line-clamp-1">{product.name} × {line.qty}</span>
                 <span className="shrink-0 font-medium text-navy">
-                  {formatFCFA(product.price * line.qty)}
+                  {formatFCFA(Number(product.price) * line.qty)}
                 </span>
               </li>
             ))}
@@ -268,9 +366,10 @@ export default function CheckoutPage() {
           </div>
           <button
             type="submit"
-            className="mt-4 w-full rounded-xl bg-orange py-3.5 text-sm font-bold text-white shadow-lg shadow-orange/25 hover:bg-orange-dark active:scale-95"
+            disabled={submitting}
+            className="mt-4 w-full rounded-xl bg-orange py-3.5 text-sm font-bold text-white shadow-lg shadow-orange/25 hover:bg-orange-dark active:scale-95 disabled:opacity-50"
           >
-            Continuer vers le paiement
+            {submitting ? "Création de la commande..." : "Continuer vers le paiement"}
           </button>
         </div>
       </form>

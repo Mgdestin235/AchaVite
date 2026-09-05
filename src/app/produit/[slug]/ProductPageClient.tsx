@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Minus, Plus, ShoppingCart, Star, Zap, ChevronRight, Check, FileText, BookOpen, Download } from "lucide-react";
 import { toast } from "sonner";
-import { useShopStore } from "@/lib/store/shop";
+import { createClient } from "@/lib/supabase/client";
+import { getPublicProductBySlug, listPublicProducts, toLegacyProduct } from "@/lib/db/products";
 import { useCartStore } from "@/lib/store/cart";
 import { useRecentStore } from "@/lib/store/recent";
 import { CATEGORIES } from "@/lib/data";
@@ -14,20 +15,41 @@ import { Gallery } from "@/components/product/Gallery";
 import { ProductBadges } from "@/components/product/ProductBadges";
 import { ProductCard } from "@/components/product/ProductCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import type { Product } from "@/lib/types";
 
 export function ProductPageClient({ slug }: { slug: string }) {
   const router = useRouter();
-  const products = useShopStore((s) => s.products);
+  const supabase = createClient();
   const addItem = useCartStore((s) => s.addItem);
   const trackRecent = useRecentStore((s) => s.track);
   const recentIds = useRecentStore((s) => s.ids);
 
-  const product = useMemo(() => products.find((p) => p.slug === slug), [products, slug]);
+  const [product, setProduct] = useState<Product | null | undefined>(undefined);
+  const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [qty, setQty] = useState(1);
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([getPublicProductBySlug(supabase, slug), listPublicProducts(supabase)]).then(
+      ([row, rows]) => {
+        if (cancelled) return;
+        setProduct(row ? toLegacyProduct(row) : null);
+        setAllProducts(rows.map(toLegacyProduct));
+      }
+    );
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [slug]);
 
   useEffect(() => {
     if (product) trackRecent(product.id);
   }, [product, trackRecent]);
+
+  if (product === undefined) {
+    return <p className="py-20 text-center text-sm text-gray-400">Chargement...</p>;
+  }
 
   if (!product) {
     return (
@@ -46,12 +68,12 @@ export function ProductPageClient({ slug }: { slug: string }) {
   const outOfStock = product.stock <= 0;
   const discount = discountPercent(product.price, product.oldPrice);
 
-  const similar = products
+  const similar = allProducts
     .filter((p) => p.category === product.category && p.id !== product.id && p.active)
     .slice(0, 5);
 
   const recentlyViewed = recentIds
-    .map((id) => products.find((p) => p.id === id))
+    .map((id) => allProducts.find((p) => p.id === id))
     .filter((p): p is NonNullable<typeof p> => !!p && p.id !== product.id)
     .slice(0, 5);
 
