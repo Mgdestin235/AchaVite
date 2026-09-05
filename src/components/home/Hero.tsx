@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from "framer-motion";
 const SLIDES = [
   {
     title: "Les meilleures bonnes affaires à portée de main",
-    subtitle: "Découvrez des milliers de produits à prix imbattables, livrés partout au Tchad.",
+    subtitle: "Découvrez des milliers de produits à prix imbattables, livrés partout en Afrique.",
     cta: "Découvrir les offres",
     href: "/promotions",
     image: "https://images.unsplash.com/photo-1631245939104-906b762b2b83?w=1600&q=80",

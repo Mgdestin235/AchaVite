@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     template: "%s | AchaVite",
   },
   description:
-    "AchaVite est une boutique en ligne 100% africaine. Découvrez des milliers de produits à prix imbattables, livrés partout au Tchad.",
+    "AchaVite est une boutique en ligne 100% africaine. Découvrez des milliers de produits à prix imbattables, livrés partout en Afrique.",
   icons: {
     icon: "/favicon.png",
     apple: "/icons/apple-touch-icon.png",

@@ -31,7 +31,7 @@ export default function ContactPage() {
         </div>
         <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-4 text-center ring-1 ring-black/5">
           <MapPin className="text-orange" size={20} />
-          <span className="text-xs font-semibold text-navy">N&apos;Djamena, Tchad</span>
+          <span className="text-xs font-semibold text-navy">Afrique</span>
         </div>
       </div>
 
