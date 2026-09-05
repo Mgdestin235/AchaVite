@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { useShopStore } from "@/lib/store/shop";
 import { Hero } from "@/components/home/Hero";
-import { QuickAccessButtons } from "@/components/home/QuickAccessButtons";
 import { CategoryGrid } from "@/components/home/CategoryGrid";
 import { ProductSection } from "@/components/home/ProductSection";
 
@@ -30,7 +29,6 @@ export default function HomePage() {
   return (
     <div>
       <Hero />
-      <QuickAccessButtons />
       <CategoryGrid />
       <ProductSection
         title="Offres du moment"

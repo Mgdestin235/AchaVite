@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Menu, ShoppingCart, User, Package, X } from "lucide-react";
+import { Menu, ShoppingCart, User, Package, X, ShoppingBag, ShieldCheck } from "lucide-react";
 import { useCartStore } from "@/lib/store/cart";
 import { useAuthStore } from "@/lib/store/auth";
 import { CATEGORIES } from "@/lib/data";
@@ -16,6 +16,23 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 bg-navy shadow-md">
+      <div className="flex items-center gap-2 border-b border-white/10 bg-navy-dark px-3 py-1.5 sm:px-6">
+        <Link
+          href="/catalogue"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-orange px-2 py-1.5 text-xs font-semibold text-white hover:bg-orange-dark sm:flex-initial sm:px-4"
+        >
+          <ShoppingBag size={14} />
+          Voir les produits
+        </Link>
+        <Link
+          href="/admin"
+          className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-white/10 px-2 py-1.5 text-xs font-semibold text-white hover:bg-white/20 sm:flex-initial sm:px-4"
+        >
+          <ShieldCheck size={14} />
+          Espace Admin
+        </Link>
+      </div>
+
       <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
         <button
           onClick={() => setMenuOpen(true)}
