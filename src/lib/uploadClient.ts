@@ -1,5 +1,3 @@
-import { upload } from "@vercel/blob/client";
-
 export type UploadKind = "image" | "video" | "pdf" | "ebook";
 
 const FOLDER: Record<UploadKind, string> = {
@@ -9,16 +7,57 @@ const FOLDER: Record<UploadKind, string> = {
   ebook: "products/ebooks",
 };
 
+const RESOURCE_TYPE: Record<UploadKind, string> = {
+  image: "image",
+  video: "video",
+  pdf: "raw",
+  ebook: "raw",
+};
+
+type SignatureResponse = {
+  signature: string;
+  timestamp: number;
+  apiKey: string;
+  cloudName: string;
+  folder: string;
+  error?: string;
+};
+
 /**
- * Uploads a file directly from the browser to Vercel Blob storage and
- * returns its public URL. Throws if the store isn't configured yet
- * (missing BLOB_READ_WRITE_TOKEN on the server) or the upload fails.
+ * Uploads a file directly from the browser to Cloudinary and returns its
+ * public URL. The file bytes never pass through our server (only a short
+ * -lived signature does), so large videos/ebooks aren't limited by Vercel's
+ * serverless function body size. Throws if Cloudinary isn't configured yet
+ * or the upload fails.
  */
 export async function uploadFile(file: File, kind: UploadKind): Promise<string> {
-  const blob = await upload(`${FOLDER[kind]}/${file.name}`, file, {
-    access: "public",
-    handleUploadUrl: "/api/upload",
-    clientPayload: kind,
+  const folder = FOLDER[kind];
+
+  const sigRes = await fetch("/api/upload", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ folder }),
   });
-  return blob.url;
+  const sigData = (await sigRes.json()) as SignatureResponse;
+  if (!sigRes.ok) {
+    throw new Error(sigData.error || "Échec de préparation du téléversement");
+  }
+
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("api_key", sigData.apiKey);
+  formData.append("timestamp", String(sigData.timestamp));
+  formData.append("signature", sigData.signature);
+  formData.append("folder", sigData.folder);
+
+  const uploadRes = await fetch(
+    `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${RESOURCE_TYPE[kind]}/upload`,
+    { method: "POST", body: formData }
+  );
+  const uploadData = await uploadRes.json();
+  if (!uploadRes.ok) {
+    throw new Error(uploadData?.error?.message || "Échec du téléversement");
+  }
+
+  return uploadData.secure_url as string;
 }

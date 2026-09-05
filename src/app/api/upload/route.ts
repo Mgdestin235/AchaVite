@@ -1,49 +1,34 @@
-import { handleUpload, type HandleUploadBody } from "@vercel/blob/client";
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 
-// Client-side direct-to-Blob upload: the browser uploads bytes straight to
-// Vercel Blob storage, this route only issues a short-lived signed token.
-// This avoids the ~4.5MB body-size limit of Vercel serverless functions,
-// which matters for product videos, PDFs, and ebooks.
+// Issues a short-lived signature so the browser can upload a file directly
+// to Cloudinary (bypassing this server entirely for the file bytes, which
+// avoids Vercel's ~4.5MB serverless function body limit -- important for
+// product videos and ebooks).
 export async function POST(request: Request): Promise<NextResponse> {
-  const body = (await request.json()) as HandleUploadBody;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const apiSecret = process.env.CLOUDINARY_API_SECRET;
 
-  try {
-    const jsonResponse = await handleUpload({
-      body,
-      request,
-      onBeforeGenerateToken: async (_pathname, clientPayload) => {
-        const kind = (clientPayload as string | null) ?? "image";
-        const allowedContentTypes: Record<string, string[]> = {
-          image: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"],
-          video: ["video/mp4", "video/webm", "video/quicktime"],
-          pdf: ["application/pdf"],
-          ebook: ["application/pdf", "application/epub+zip", "application/x-mobipocket-ebook"],
-        };
-        const maxSizes: Record<string, number> = {
-          image: 10 * 1024 * 1024,
-          video: 200 * 1024 * 1024,
-          pdf: 50 * 1024 * 1024,
-          ebook: 50 * 1024 * 1024,
-        };
-        return {
-          allowedContentTypes: allowedContentTypes[kind] ?? allowedContentTypes.image,
-          maximumSizeInBytes: maxSizes[kind] ?? maxSizes.image,
-          addRandomSuffix: true,
-          tokenPayload: JSON.stringify({ kind }),
-        };
-      },
-      onUploadCompleted: async () => {
-        // No database to update in this project — the returned blob URL is
-        // stored directly on the product by the client.
-      },
-    });
-
-    return NextResponse.json(jsonResponse);
-  } catch (error) {
+  if (!cloudName || !apiKey || !apiSecret) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Upload failed" },
-      { status: 400 }
+      { error: "Le stockage de fichiers (Cloudinary) n'est pas encore configuré." },
+      { status: 503 }
     );
   }
+
+  const { folder } = (await request.json()) as { folder: string };
+  const timestamp = Math.round(Date.now() / 1000);
+
+  const paramsToSign: Record<string, string | number> = { folder, timestamp };
+  const toSign = Object.keys(paramsToSign)
+    .sort()
+    .map((key) => `${key}=${paramsToSign[key]}`)
+    .join("&");
+  const signature = crypto
+    .createHash("sha1")
+    .update(toSign + apiSecret)
+    .digest("hex");
+
+  return NextResponse.json({ signature, timestamp, apiKey, cloudName, folder });
 }
