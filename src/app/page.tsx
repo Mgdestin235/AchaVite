@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingBag, ShoppingCart, Store, ChevronRight, ShieldCheck } from "lucide-react";
+import { ShoppingBag, ShoppingCart, Store, ChevronRight, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function LandingPage() {
   return (
@@ -15,13 +15,14 @@ export default function LandingPage() {
         <path d="M0 60 C 120 120, 260 0, 500 70 L 500 0 L 0 0 Z" fill="currentColor" />
       </svg>
       <svg
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-40 w-full"
-        viewBox="0 0 500 150"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-48 w-full"
+        viewBox="0 0 500 180"
         preserveAspectRatio="none"
         fill="none"
       >
-        <path d="M0 90 C 140 20, 340 150, 500 60 L 500 150 L 0 150 Z" fill="var(--color-navy-light)" opacity="0.5" />
-        <path d="M0 130 C 160 60, 360 170, 500 100 L 500 150 L 0 150 Z" fill="var(--color-orange)" opacity="0.85" />
+        <path d="M0 110 C 150 60, 320 140, 500 90 L 500 180 L 0 180 Z" fill="#1c3f68" opacity="0.7" />
+        <path d="M0 150 C 180 100, 300 170, 500 120 L 500 180 L 0 180 Z" fill="var(--color-navy-light)" />
+        <path d="M230 180 C 300 130, 420 110, 500 140 L 500 180 Z" fill="var(--color-orange)" />
       </svg>
 
       <div className="relative z-10 flex w-full flex-col items-center">
@@ -57,9 +58,12 @@ export default function LandingPage() {
         <div className="flex w-full max-w-md flex-col gap-4">
           <Link
             href="/inscription"
-            className="group flex items-center gap-4 rounded-2xl bg-orange-light p-4 shadow-xl transition-transform hover:-translate-y-0.5 sm:p-5"
+            className="group relative flex items-start gap-4 rounded-2xl bg-orange-light p-4 shadow-xl transition-transform hover:-translate-y-0.5 sm:p-5"
           >
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-orange text-white">
+            <span
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-inner"
+              style={{ background: "linear-gradient(145deg, #ffb066, var(--color-orange))" }}
+            >
               <ShoppingBag size={26} />
             </span>
             <div className="min-w-0 flex-1">
@@ -67,17 +71,24 @@ export default function LandingPage() {
               <p className="mt-0.5 text-xs text-navy/60 sm:text-sm">
                 Créez votre compte pour parcourir le catalogue et commander en toute simplicité.
               </p>
+              <span className="mt-2 flex items-center gap-1.5 text-sm font-bold text-orange">
+                Créer mon compte
+                <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
+              </span>
             </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-orange shadow transition-transform group-hover:translate-x-1">
+            <span className="absolute right-4 top-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-orange shadow transition-transform group-hover:translate-x-1">
               <ChevronRight size={20} />
             </span>
           </Link>
 
           <Link
             href="/admin/inscription"
-            className="group flex items-center gap-4 rounded-2xl bg-blue-50 p-4 shadow-xl transition-transform hover:-translate-y-0.5 sm:p-5"
+            className="group relative flex items-start gap-4 rounded-2xl bg-blue-50 p-4 shadow-xl transition-transform hover:-translate-y-0.5 sm:p-5"
           >
-            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-blue-500 text-white">
+            <span
+              className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl text-white shadow-inner"
+              style={{ background: "linear-gradient(145deg, #60a5fa, #2563eb)" }}
+            >
               <Store size={26} />
             </span>
             <div className="min-w-0 flex-1">
@@ -85,8 +96,12 @@ export default function LandingPage() {
               <p className="mt-0.5 text-xs text-navy/60 sm:text-sm">
                 Créez votre boutique, ajoutez vos produits et vendez partout en Afrique.
               </p>
+              <span className="mt-2 flex items-center gap-1.5 text-sm font-bold text-blue-600">
+                Créer ma boutique
+                <ArrowRight size={15} className="transition-transform group-hover:translate-x-1" />
+              </span>
             </div>
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-blue-500 shadow transition-transform group-hover:translate-x-1">
+            <span className="absolute right-4 top-4 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-white text-blue-500 shadow transition-transform group-hover:translate-x-1">
               <ChevronRight size={20} />
             </span>
           </Link>
