@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ShieldCheck, Loader2 } from "lucide-react";
+import { ShieldCheck, ShieldAlert, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
 export function MfaEnroll({ onDone }: { onDone: () => void }) {
@@ -11,31 +11,54 @@ export function MfaEnroll({ onDone }: { onDone: () => void }) {
   const [factorId, setFactorId] = useState("");
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
   const [verifying, setVerifying] = useState(false);
+  const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    supabase.auth.mfa
-      .enroll({ factorType: "totp", friendlyName: "AchaVite Admin" })
-      .then(({ data, error }) => {
-        if (cancelled) return;
-        if (error) {
-          setError(error.message);
-          return;
-        }
-        setFactorId(data.id);
-        setSecret(data.totp.secret);
-        // supabase-js already returns a complete `data:image/svg+xml;utf-8,...`
-        // URI here (not raw SVG markup) — wrapping it again produced a
-        // nonsensical double-encoded data URI that silently failed to render.
-        const qr = data.totp.qr_code;
-        setQrCode(qr.startsWith("data:") ? qr : `data:image/svg+xml;utf-8,${encodeURIComponent(qr)}`);
+
+    async function run() {
+      // A previous failed attempt (e.g. the broken-QR bug) can leave an
+      // unverified factor behind; Supabase then refuses to enroll a new one
+      // with the same friendly name, which used to fail silently here
+      // (see loadError handling below). Clear any stale unverified factor
+      // first so retrying always works.
+      // supabase-js types `data.totp` as verified-only, but at runtime it
+      // (like `data.all`) actually includes unverified factors too — filter
+      // `all` ourselves to find a stale one without fighting that type.
+      const { data: existing } = await supabase.auth.mfa.listFactors();
+      const stale = existing?.all.find((f) => f.factor_type === "totp" && f.status === "unverified");
+      if (stale) {
+        await supabase.auth.mfa.unenroll({ factorId: stale.id });
+      }
+      if (cancelled) return;
+
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+        friendlyName: `AchaVite Admin ${Date.now()}`,
       });
+      if (cancelled) return;
+      if (error) {
+        setLoadError(error.message);
+        return;
+      }
+      setLoadError("");
+      setFactorId(data.id);
+      setSecret(data.totp.secret);
+      // supabase-js already returns a complete `data:image/svg+xml;utf-8,...`
+      // URI here (not raw SVG markup) — wrapping it again produced a
+      // nonsensical double-encoded data URI that silently failed to render.
+      const qr = data.totp.qr_code;
+      setQrCode(qr.startsWith("data:") ? qr : `data:image/svg+xml;utf-8,${encodeURIComponent(qr)}`);
+    }
+
+    run();
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [attempt]);
 
   async function handleVerify(e: React.FormEvent) {
     e.preventDefault();
@@ -63,7 +86,25 @@ export function MfaEnroll({ onDone }: { onDone: () => void }) {
         </p>
       </div>
 
-      {!qrCode ? (
+      {loadError ? (
+        <div className="flex flex-col items-center gap-3 py-6 text-center">
+          <ShieldAlert size={28} className="text-red-500" />
+          <p className="text-sm text-red-500">{loadError}</p>
+          <button
+            onClick={() => {
+              setLoadError("");
+              setQrCode(null);
+              setAttempt((a) => a + 1);
+            }}
+            className="rounded-xl bg-orange px-4 py-2 text-sm font-bold text-white hover:bg-orange-dark"
+          >
+            Réessayer
+          </button>
+          <button onClick={onDone} className="text-xs font-medium text-gray-400 underline hover:text-gray-600">
+            Continuer sans 2FA pour l&apos;instant
+          </button>
+        </div>
+      ) : !qrCode ? (
         <div className="flex justify-center py-8">
           <Loader2 size={28} className="animate-spin text-navy" />
         </div>
@@ -90,6 +131,13 @@ export function MfaEnroll({ onDone }: { onDone: () => void }) {
             className="mt-4 w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark disabled:opacity-50"
           >
             {verifying ? "Vérification..." : "Activer le 2FA"}
+          </button>
+          <button
+            type="button"
+            onClick={onDone}
+            className="mt-3 block w-full text-center text-xs font-medium text-gray-400 underline hover:text-gray-600"
+          >
+            Continuer sans 2FA pour l&apos;instant
           </button>
         </form>
       )}
