@@ -25,7 +25,11 @@ export function MfaEnroll({ onDone }: { onDone: () => void }) {
         }
         setFactorId(data.id);
         setSecret(data.totp.secret);
-        setQrCode(`data:image/svg+xml;utf-8,${encodeURIComponent(data.totp.qr_code)}`);
+        // supabase-js already returns a complete `data:image/svg+xml;utf-8,...`
+        // URI here (not raw SVG markup) — wrapping it again produced a
+        // nonsensical double-encoded data URI that silently failed to render.
+        const qr = data.totp.qr_code;
+        setQrCode(qr.startsWith("data:") ? qr : `data:image/svg+xml;utf-8,${encodeURIComponent(qr)}`);
       });
     return () => {
       cancelled = true;
