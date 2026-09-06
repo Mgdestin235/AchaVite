@@ -23,52 +23,56 @@ export default function LandingPage() {
 
       <div className="grid w-full max-w-3xl gap-5 sm:grid-cols-2">
         <Link
-          href="/boutique"
+          href="/inscription"
           className="group flex flex-col items-start gap-4 rounded-2xl bg-white p-6 shadow-xl transition-transform hover:-translate-y-1 sm:p-8"
         >
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-orange-light text-orange">
             <ShoppingBag size={28} />
           </span>
           <div>
-            <h2 className="text-lg font-bold text-navy sm:text-xl">Je suis acheteur</h2>
+            <h2 className="text-lg font-bold text-navy sm:text-xl">Devenir acheteur</h2>
             <p className="mt-1 text-sm text-gray-500">
-              Parcourez le catalogue, comparez les prix et commandez en toute simplicité.
+              Créez votre compte pour parcourir le catalogue et commander en toute simplicité.
             </p>
           </div>
           <span className="mt-auto flex items-center gap-1.5 text-sm font-bold text-orange">
-            Découvrir la boutique
+            Créer mon compte
             <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
           </span>
         </Link>
 
         <Link
-          href="/admin"
+          href="/admin/inscription"
           className="group flex flex-col items-start gap-4 rounded-2xl bg-white p-6 shadow-xl transition-transform hover:-translate-y-1 sm:p-8"
         >
           <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-navy/10 text-navy">
             <Store size={28} />
           </span>
           <div>
-            <h2 className="text-lg font-bold text-navy sm:text-xl">Je suis vendeur</h2>
+            <h2 className="text-lg font-bold text-navy sm:text-xl">Devenir vendeur</h2>
             <p className="mt-1 text-sm text-gray-500">
               Créez votre boutique, ajoutez vos produits et vendez partout en Afrique.
             </p>
           </div>
           <span className="mt-auto flex items-center gap-1.5 text-sm font-bold text-navy">
-            Devenir vendeur
+            Créer ma boutique
             <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
           </span>
         </Link>
       </div>
 
-      <p className="mt-10 text-center text-xs text-white/50">
-        Déjà client ?{" "}
+      <p className="mt-10 max-w-md text-center text-xs text-white/50">
+        Déjà un compte ?{" "}
         <Link href="/connexion" className="font-semibold text-white underline">
           Connectez-vous
         </Link>{" "}
-        ou{" "}
+        · Vous pouvez aussi{" "}
+        <Link href="/boutique" className="font-semibold text-white underline">
+          parcourir la boutique
+        </Link>{" "}
+        sans compte, ou{" "}
         <Link href="/suivi" className="font-semibold text-white underline">
-          suivez une commande
+          suivre une commande
         </Link>
         .
       </p>
