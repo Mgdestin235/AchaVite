@@ -1,3 +1,4 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { OrderRow, OrderStatus } from "./db/types";
 
 export type OrderItemWithStore = {
@@ -30,16 +31,15 @@ export async function lookupOrderByCodeAndPhone(
 }
 
 export type OrderSummary = OrderRow & {
-  order_items: { id: string; name: string; image: string | null; quantity: number; price: number }[];
+  order_items: { id: string; name: string; image: string | null; quantity: number; price: number; status: OrderStatus }[];
 };
 
-export async function listOrdersByPhone(phone: string): Promise<{ orders: OrderSummary[]; error: string | null }> {
-  const res = await fetch("/api/orders/by-phone", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ phone }),
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) return { orders: [], error: data.error || "Une erreur est survenue." };
-  return { orders: (data.orders as OrderSummary[]) ?? [], error: null };
+/** For a logged-in buyer: RLS (customer_id = auth.uid()) scopes this to their own orders. */
+export async function listOrdersForCustomer(supabase: SupabaseClient, customerId: string): Promise<OrderSummary[]> {
+  const { data } = await supabase
+    .from("orders")
+    .select("*, order_items(id, name, image, quantity, price, status)")
+    .eq("customer_id", customerId)
+    .order("created_at", { ascending: false });
+  return (data as OrderSummary[]) ?? [];
 }

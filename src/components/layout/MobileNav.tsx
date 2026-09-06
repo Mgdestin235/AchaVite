@@ -7,7 +7,7 @@ import { useCartStore } from "@/lib/store/cart";
 import { cn } from "@/lib/cn";
 
 const ITEMS = [
-  { href: "/", label: "Accueil", icon: Home },
+  { href: "/boutique", label: "Accueil", icon: Home },
   { href: "/catalogue", label: "Catégories", icon: LayoutGrid },
   { href: "/panier", label: "Panier", icon: ShoppingCart },
   { href: "/compte/commandes", label: "Commandes", icon: Package },
@@ -18,12 +18,13 @@ export function MobileNav() {
   const pathname = usePathname();
   const cartCount = useCartStore((s) => s.lines.reduce((sum, l) => sum + l.qty, 0));
 
-  if (pathname.startsWith("/admin")) return null;
+  if (pathname.startsWith("/admin") || pathname.startsWith("/super-admin")) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 flex border-t border-gray-100 bg-white/95 backdrop-blur lg:hidden">
       {ITEMS.map((item) => {
-        const active = item.href === "/" ? pathname === "/" : pathname.startsWith(item.href);
+        const active =
+          item.href === "/compte" ? pathname === "/compte" : pathname.startsWith(item.href);
         const Icon = item.icon;
         return (
           <Link

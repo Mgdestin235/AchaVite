@@ -70,7 +70,7 @@ function AdminSidebar({ email, onNavigate }: { email: string; onNavigate?: () =>
       <div className="space-y-1 border-t border-white/10 p-3">
         {email && <p className="truncate px-3 py-1 text-[11px] text-white/40">{email}</p>}
         <Link
-          href="/"
+          href="/boutique"
           className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-white/70 hover:bg-white/5 hover:text-white"
         >
           <ExternalLink size={18} />

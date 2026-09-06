@@ -42,6 +42,7 @@ export type Store = {
   opening_hours: string | null;
   delivery_info: string | null;
   status: StoreStatus;
+  rejection_reason: string | null;
   created_at: string;
   updated_at: string;
 };

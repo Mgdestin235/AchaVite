@@ -56,6 +56,11 @@ export default async function VendorDashboardPage() {
         </span>
         <h1 className="text-lg font-bold text-navy">{notice.title}</h1>
         <p className="max-w-sm text-sm text-gray-500">{notice.body}</p>
+        {store.status === "rejected" && store.rejection_reason && (
+          <p className="max-w-sm rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+            Motif : {store.rejection_reason}
+          </p>
+        )}
         <Link
           href="/admin/store"
           className="mt-2 rounded-xl border border-gray-200 px-5 py-2.5 text-sm font-semibold text-navy hover:bg-gray-50"

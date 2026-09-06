@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Search } from "lucide-react";
-import { useAuthStore } from "@/lib/store/auth";
-import { listOrdersByPhone, type OrderSummary } from "@/lib/orderLookup";
+import { User } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+import { listOrdersForCustomer, type OrderSummary } from "@/lib/orderLookup";
+import { resolveOverallStatus } from "@/lib/db/orders";
 import { formatFCFA } from "@/lib/format";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { OrderStatus } from "@/lib/db/types";
@@ -32,19 +33,27 @@ const STATUS_COLORS: Record<OrderStatus, string> = {
 type Tab = "toutes" | "en-cours" | "livrees";
 
 export default function MyOrdersPage() {
-  const currentCustomer = useAuthStore((s) => s.currentCustomer());
-  const [phoneQuery, setPhoneQuery] = useState("");
-  const [lookupPhone, setLookupPhone] = useState<string | null>(null);
+  const supabase = createClient();
+  const [userId, setUserId] = useState<string | null | undefined>(undefined);
   const [orders, setOrders] = useState<OrderSummary[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<Tab>("toutes");
 
-  const phone = currentCustomer?.phone ?? lookupPhone;
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!cancelled) setUserId(user?.id ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
-    if (!phone) return;
+    if (!userId) return;
     let cancelled = false;
-    listOrdersByPhone(phone).then(({ orders: data }) => {
+    listOrdersForCustomer(supabase, userId).then((data) => {
       if (cancelled) return;
       setOrders(data);
       setLoading(false);
@@ -52,43 +61,42 @@ export default function MyOrdersPage() {
     return () => {
       cancelled = true;
     };
-  }, [phone]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId]);
 
-  const filtered = orders.filter((o) => {
-    if (tab === "en-cours") return !["livree", "annulee"].includes(o.status);
-    if (tab === "livrees") return o.status === "livree";
+  const ordersWithStatus = orders.map((o) => ({
+    ...o,
+    overallStatus: resolveOverallStatus(o.order_items.map((it) => it.status)),
+  }));
+
+  const filtered = ordersWithStatus.filter((o) => {
+    if (tab === "en-cours") return !["livree", "annulee"].includes(o.overallStatus);
+    if (tab === "livrees") return o.overallStatus === "livree";
     return true;
   });
 
-  if (!phone) {
+  if (userId === undefined) {
+    return <p className="py-20 text-center text-sm text-gray-400">Chargement...</p>;
+  }
+
+  if (!userId) {
     return (
-      <div className="mx-auto max-w-md px-4 py-16 sm:px-6">
-        <h1 className="mb-1 text-xl font-bold text-navy">Mes commandes</h1>
-        <p className="mb-5 text-sm text-gray-500">
-          Connectez-vous, ou entrez votre numéro de téléphone pour retrouver vos commandes.
+      <div className="mx-auto max-w-sm px-4 py-16 text-center sm:px-6">
+        <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-navy/5 text-navy">
+          <User size={28} />
+        </span>
+        <h1 className="text-lg font-bold text-navy">Vous n&apos;êtes pas connecté</h1>
+        <p className="mt-2 text-sm text-gray-500">
+          Connectez-vous pour retrouver vos commandes.
         </p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            setLookupPhone(phoneQuery);
-          }}
-          className="flex gap-2"
+        <Link
+          href="/connexion?redirect=/compte/commandes"
+          className="mt-5 block w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark"
         >
-          <div className="relative flex-1">
-            <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              value={phoneQuery}
-              onChange={(e) => setPhoneQuery(e.target.value)}
-              placeholder="Votre numéro de téléphone"
-              className="w-full rounded-lg border border-gray-200 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-orange"
-            />
-          </div>
-          <button className="rounded-lg bg-orange px-4 text-sm font-bold text-white hover:bg-orange-dark">
-            Voir
-          </button>
-        </form>
-        <Link href="/connexion" className="mt-4 block text-center text-sm font-semibold text-navy hover:text-orange">
-          Ou se connecter
+          Se connecter
+        </Link>
+        <Link href="/suivi" className="mt-3 block text-sm font-semibold text-navy hover:text-orange">
+          Ou suivre une commande sans compte
         </Link>
       </div>
     );
@@ -136,8 +144,8 @@ export default function MyOrdersPage() {
             >
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-bold text-navy">{order.code}</span>
-                <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", STATUS_COLORS[order.status])}>
-                  {STATUS_LABELS[order.status]}
+                <span className={cn("rounded-full px-2.5 py-0.5 text-xs font-semibold", STATUS_COLORS[order.overallStatus])}>
+                  {STATUS_LABELS[order.overallStatus]}
                 </span>
               </div>
               <div className="mb-2 flex -space-x-2">

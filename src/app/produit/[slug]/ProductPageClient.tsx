@@ -92,7 +92,7 @@ export function ProductPageClient({ slug }: { slug: string }) {
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
       <nav className="mb-4 flex items-center gap-1 text-xs text-gray-500">
-        <Link href="/" className="hover:text-navy">Accueil</Link>
+        <Link href="/boutique" className="hover:text-navy">Accueil</Link>
         <ChevronRight size={13} />
         {category && (
           <>

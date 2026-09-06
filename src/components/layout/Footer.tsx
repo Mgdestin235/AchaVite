@@ -30,7 +30,7 @@ export function Footer() {
         <div>
           <h4 className="mb-3 text-sm font-semibold text-white">Navigation</h4>
           <ul className="space-y-2 text-sm">
-            <li><Link href="/" className="hover:text-orange">Accueil</Link></li>
+            <li><Link href="/boutique" className="hover:text-orange">Accueil</Link></li>
             <li><Link href="/catalogue" className="hover:text-orange">Produits</Link></li>
             <li><Link href="/catalogue" className="hover:text-orange">Catégories</Link></li>
             <li><Link href="/promotions" className="hover:text-orange">Promotions</Link></li>

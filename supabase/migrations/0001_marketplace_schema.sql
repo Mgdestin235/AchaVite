@@ -125,6 +125,8 @@ create table if not exists public.stores (
   opening_hours text,
   delivery_info text,
   status store_status not null default 'pending',
+  -- Shown to the vendor when the Super Admin rejects their application.
+  rejection_reason text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );

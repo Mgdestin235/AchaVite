@@ -6,7 +6,6 @@ import { Home, Store, MapPinned } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { useCartStore } from "@/lib/store/cart";
-import { useAuthStore } from "@/lib/store/auth";
 import { listPublicProductsByIds, type ProductWithRelations } from "@/lib/db/products";
 import { listZonesForStores } from "@/lib/db/deliveryZones";
 import { findActivePromoByCode } from "@/lib/db/promos";
@@ -25,9 +24,11 @@ export default function CheckoutPage() {
   const promoCode = useCartStore((s) => s.promoCode);
   const clearCart = useCartStore((s) => s.clear);
   const clearPromo = useCartStore((s) => s.clearPromo);
-  const currentCustomer = useAuthStore((s) => s.currentCustomer());
 
   const ids = useMemo(() => lines.map((l) => l.productId), [lines]);
+  const [customer, setCustomer] = useState<{ id: string; name: string; phone: string; email: string } | null | undefined>(
+    undefined
+  );
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
   const [zones, setZones] = useState<
     { id: string; store_id: string; city: string; fee_domicile: number; fee_relais: number; has_relais: boolean; has_boutique: boolean; relais_points: string[] }[]
@@ -44,14 +45,41 @@ export default function CheckoutPage() {
     [lines, products]
   );
 
-  const [name, setName] = useState(currentCustomer?.name ?? "");
-  const [phone, setPhone] = useState(currentCustomer?.phone ?? "");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [city, setCity] = useState("");
   const [address, setAddress] = useState("");
   const [neighborhood, setNeighborhood] = useState("");
   const [mode, setMode] = useState<DeliveryMode>("domicile");
   const [relaisPoint, setRelaisPoint] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (cancelled) return;
+      if (!user) {
+        setCustomer(null);
+        router.push("/connexion?redirect=/checkout");
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name, phone")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      const info = { id: user.id, name: profile?.name ?? "", phone: profile?.phone ?? "", email: user.email ?? "" };
+      setCustomer(info);
+      setName(info.name);
+      setPhone(info.phone);
+      setEmail(info.email);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -112,8 +140,14 @@ export default function CheckoutPage() {
 
   const total = subtotal - discount + deliveryFee;
 
-  if (loading) {
+  if (loading || customer === undefined) {
     return <p className="py-20 text-center text-sm text-gray-400">Chargement...</p>;
+  }
+
+  if (!customer) {
+    // useEffect already triggered the redirect to /connexion; avoid a flash
+    // of the checkout form while that navigation happens.
+    return null;
   }
 
   if (items.length === 0) {
@@ -131,6 +165,7 @@ export default function CheckoutPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!customer) return;
     if (!name.trim() || !phone.trim() || !city) {
       toast.error("Merci de renseigner votre nom, téléphone et ville.");
       return;
@@ -151,6 +186,7 @@ export default function CheckoutPage() {
     setSubmitting(true);
     const { order, error } = await createOrder(supabase, {
       customer: {
+        id: customer.id,
         name: name.trim(),
         phone: phone.trim(),
         email: email.trim() || undefined,
@@ -245,11 +281,6 @@ export default function CheckoutPage() {
                 <p className="text-xs text-orange-dark sm:col-span-2">
                   Votre commande contient un produit numérique : il vous sera envoyé par email
                   après validation du paiement.
-                </p>
-              )}
-              {!currentCustomer && (
-                <p className="text-xs text-gray-400 sm:col-span-2">
-                  Pas besoin de créer un compte : votre numéro suffit pour suivre votre commande.
                 </p>
               )}
             </div>

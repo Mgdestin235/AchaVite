@@ -1,41 +1,66 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { useAuthStore } from "@/lib/store/auth";
+import { createClient } from "@/lib/supabase/client";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const login = useAuthStore((s) => s.login);
-  const [phone, setPhone] = useState("");
-  const [password, setPassword] = useState("");
+  return (
+    <Suspense>
+      <LoginForm />
+    </Suspense>
+  );
+}
 
-  function handleSubmit(e: React.FormEvent) {
+function LoginForm() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const supabase = createClient();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const res = login(phone.trim(), password);
-    if (!res.ok) {
-      toast.error(res.error ?? "Connexion impossible");
-      return;
+    setError("");
+    setLoading(true);
+    try {
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (signInError) {
+        setError("Email ou mot de passe incorrect.");
+        return;
+      }
+      toast.success("Connexion réussie");
+      router.push(searchParams.get("redirect") || "/boutique");
+      router.refresh();
+    } finally {
+      setLoading(false);
     }
-    toast.success("Connexion réussie");
-    router.push("/compte");
   }
+
+  const redirect = searchParams.get("redirect");
 
   return (
     <div className="mx-auto max-w-sm px-4 py-12 sm:px-6">
       <h1 className="mb-1 text-xl font-bold text-navy">Se connecter</h1>
       <p className="mb-6 text-sm text-gray-500">
-        Retrouvez vos commandes et vos informations en un instant.
+        Retrouvez vos commandes et finalisez vos achats.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-          placeholder="Numéro de téléphone"
-          type="tel"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          type="email"
+          required
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
         />
         <input
@@ -43,19 +68,25 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           placeholder="Mot de passe"
           type="password"
+          required
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
         />
+        {error && <p className="text-xs font-medium text-red-500">{error}</p>}
         <button
           type="submit"
-          className="w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark"
+          disabled={loading}
+          className="w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark disabled:opacity-50"
         >
-          Se connecter
+          {loading ? "Connexion..." : "Se connecter"}
         </button>
       </form>
 
       <p className="mt-5 text-center text-sm text-gray-500">
         Pas encore de compte ?{" "}
-        <Link href="/inscription" className="font-semibold text-orange">
+        <Link
+          href={`/inscription${redirect ? `?redirect=${encodeURIComponent(redirect)}` : ""}`}
+          className="font-semibold text-orange"
+        >
           Créer un compte
         </Link>
       </p>

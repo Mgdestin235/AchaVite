@@ -5,27 +5,59 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { User, Package, MapPin, Bell, LogOut } from "lucide-react";
 import { toast } from "sonner";
-import { useAuthStore } from "@/lib/store/auth";
-import { listOrdersByPhone } from "@/lib/orderLookup";
+import { createClient } from "@/lib/supabase/client";
+
+type CustomerProfile = { id: string; email: string; name: string | null; phone: string | null };
 
 export default function AccountPage() {
   const router = useRouter();
-  const currentCustomer = useAuthStore((s) => s.currentCustomer());
-  const logout = useAuthStore((s) => s.logout);
+  const supabase = createClient();
+  const [customer, setCustomer] = useState<CustomerProfile | null | undefined>(undefined);
   const [orderCount, setOrderCount] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!currentCustomer) return;
     let cancelled = false;
-    listOrdersByPhone(currentCustomer.phone).then(({ orders }) => {
-      if (!cancelled) setOrderCount(orders.length);
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (cancelled) return;
+      if (!user) {
+        setCustomer(null);
+        return;
+      }
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("name, phone")
+        .eq("id", user.id)
+        .maybeSingle();
+      if (cancelled) return;
+      setCustomer({ id: user.id, email: user.email ?? "", name: profile?.name ?? null, phone: profile?.phone ?? null });
     });
     return () => {
       cancelled = true;
     };
-  }, [currentCustomer]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  if (!currentCustomer) {
+  useEffect(() => {
+    if (!customer) return;
+    let cancelled = false;
+    supabase
+      .from("orders")
+      .select("id", { count: "exact", head: true })
+      .eq("customer_id", customer.id)
+      .then(({ count }) => {
+        if (!cancelled) setOrderCount(count ?? 0);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customer]);
+
+  if (customer === undefined) {
+    return <p className="py-20 text-center text-sm text-gray-400">Chargement...</p>;
+  }
+
+  if (!customer) {
     return (
       <div className="mx-auto max-w-sm px-4 py-16 text-center sm:px-6">
         <span className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-navy/5 text-navy">
@@ -51,21 +83,24 @@ export default function AccountPage() {
     );
   }
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await supabase.auth.signOut();
     toast.success("Déconnexion réussie");
-    router.push("/");
+    router.push("/boutique");
+    router.refresh();
   }
+
+  const displayName = customer.name || customer.email;
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
       <div className="mb-6 flex items-center gap-4 rounded-xl bg-navy p-5 text-white">
         <span className="flex h-14 w-14 items-center justify-center rounded-full bg-white/10 text-xl font-bold">
-          {currentCustomer.name.charAt(0).toUpperCase()}
+          {displayName.charAt(0).toUpperCase()}
         </span>
         <div>
-          <p className="font-bold">{currentCustomer.name}</p>
-          <p className="text-sm text-white/70">{currentCustomer.phone}</p>
+          <p className="font-bold">{displayName}</p>
+          <p className="text-sm text-white/70">{customer.phone || customer.email}</p>
         </div>
       </div>
 

@@ -1,38 +1,79 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { useAuthStore } from "@/lib/store/auth";
+import { createClient } from "@/lib/supabase/client";
 
 export default function RegisterPage() {
+  return (
+    <Suspense>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
   const router = useRouter();
-  const register = useAuthStore((s) => s.register);
+  const searchParams = useSearchParams();
+  const supabase = createClient();
+
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!name.trim() || !phone.trim() || password.length < 4) {
-      toast.error("Merci de renseigner tous les champs (mot de passe : 4 caractères min).");
+    setError("");
+    if (!name.trim() || !phone.trim()) {
+      setError("Merci de renseigner votre nom et votre téléphone.");
       return;
     }
-    const res = register({ name: name.trim(), phone: phone.trim(), password });
-    if (!res.ok) {
-      toast.error(res.error ?? "Inscription impossible");
+    if (password.length < 8) {
+      setError("Le mot de passe doit contenir au moins 8 caractères.");
       return;
     }
-    toast.success("Compte créé avec succès");
-    router.push("/compte");
+
+    setLoading(true);
+    try {
+      const { data, error: signUpError } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: { data: { name: name.trim(), phone: phone.trim(), role: "customer" } },
+      });
+      if (signUpError) {
+        setError(
+          signUpError.message === "User already registered"
+            ? "Un compte existe déjà avec cet email."
+            : signUpError.message
+        );
+        return;
+      }
+
+      if (!data.session) {
+        // Email confirmation is required on this project — sign in won't
+        // work until the user clicks the link Supabase just emailed them.
+        toast.success("Compte créé ! Vérifiez votre email pour confirmer votre inscription.");
+        router.push("/connexion");
+        return;
+      }
+
+      toast.success("Compte créé avec succès");
+      router.push(searchParams.get("redirect") || "/boutique");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
     <div className="mx-auto max-w-sm px-4 py-12 sm:px-6">
       <h1 className="mb-1 text-xl font-bold text-navy">Créer un compte</h1>
       <p className="mb-6 text-sm text-gray-500">
-        Facultatif, mais pratique pour retrouver vos commandes plus vite.
+        Nécessaire pour commander sur AchaVite et suivre vos achats.
       </p>
 
       <form onSubmit={handleSubmit} className="space-y-3">
@@ -50,17 +91,28 @@ export default function RegisterPage() {
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
         />
         <input
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Mot de passe"
-          type="password"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Email"
+          type="email"
+          required
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
         />
+        <input
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="Mot de passe (8 caractères min)"
+          type="password"
+          required
+          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+        />
+        {error && <p className="text-xs font-medium text-red-500">{error}</p>}
         <button
           type="submit"
-          className="w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark"
+          disabled={loading}
+          className="w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark disabled:opacity-50"
         >
-          Créer mon compte
+          {loading ? "Création..." : "Créer mon compte"}
         </button>
       </form>
 

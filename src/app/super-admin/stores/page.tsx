@@ -46,12 +46,33 @@ export default function SuperAdminStoresPage() {
   }, [filter, refreshKey]);
 
   async function setStatus(store: Store, status: StoreStatus) {
-    const { error } = await supabase.from("stores").update({ status }).eq("id", store.id);
+    const { error } = await supabase
+      .from("stores")
+      .update({ status, rejection_reason: status === "rejected" ? store.rejection_reason : null })
+      .eq("id", store.id);
     if (error) {
       toast.error(error.message);
       return;
     }
     toast.success(`Boutique « ${store.name} » : statut mis à jour`);
+    setRefreshKey((k) => k + 1);
+  }
+
+  async function handleReject(store: Store) {
+    const reason = window.prompt(
+      `Motif du refus de « ${store.name} » (visible par le vendeur) :`,
+      store.rejection_reason ?? ""
+    );
+    if (reason === null) return; // cancelled
+    const { error } = await supabase
+      .from("stores")
+      .update({ status: "rejected", rejection_reason: reason.trim() || null })
+      .eq("id", store.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`Boutique « ${store.name} » refusée`);
     setRefreshKey((k) => k + 1);
   }
 
@@ -94,6 +115,9 @@ export default function SuperAdminStoresPage() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-navy">{store.name}</p>
                 <p className="truncate text-xs text-gray-400">{store.city || "Ville non renseignée"}</p>
+                {store.status === "rejected" && store.rejection_reason && (
+                  <p className="mt-1 truncate text-xs text-red-500">Motif : {store.rejection_reason}</p>
+                )}
               </div>
               <span className={cn("w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold", STATUS_BADGE[store.status])}>
                 {store.status}
@@ -107,9 +131,9 @@ export default function SuperAdminStoresPage() {
                     <Check size={14} /> Approuver
                   </button>
                 )}
-                {store.status !== "rejected" && store.status === "pending" && (
+                {store.status === "pending" && (
                   <button
-                    onClick={() => setStatus(store, "rejected")}
+                    onClick={() => handleReject(store)}
                     className="flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
                   >
                     <X size={14} /> Refuser

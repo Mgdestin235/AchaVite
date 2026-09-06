@@ -46,14 +46,3 @@ export type CartLine = {
   productId: string;
   qty: number;
 };
-
-// Local, client-only "account" for guest shoppers (src/lib/store/auth.ts) —
-// unrelated to the real Supabase-backed auth used by vendors/super admin.
-export type Customer = {
-  name: string;
-  phone: string;
-  email?: string;
-  password: string;
-  city?: string;
-  address?: string;
-};

@@ -71,6 +71,7 @@ export function StoreForm({
       if (!user) return;
 
       if (store) {
+        const wasRejected = store.status === "rejected";
         const { error } = await supabase
           .from("stores")
           .update({
@@ -85,10 +86,12 @@ export function StoreForm({
             delivery_info: deliveryInfo,
             logo_url: logoUrl || null,
             banner_url: bannerUrl || null,
+            // Resubmitting after a refusal sends it back for a fresh review.
+            ...(wasRejected ? { status: "pending", rejection_reason: null } : {}),
           })
           .eq("id", store.id);
         if (error) throw error;
-        toast.success("Boutique mise à jour");
+        toast.success(wasRejected ? "Boutique resoumise pour validation" : "Boutique mise à jour");
       } else {
         const { error } = await supabase.from("stores").insert({
           owner_id: user.id,
@@ -120,14 +123,21 @@ export function StoreForm({
   return (
     <form onSubmit={handleSubmit} className="max-w-2xl space-y-5">
       {store && (
-        <span
-          className={cn(
-            "inline-block rounded-full px-3 py-1 text-xs font-semibold",
-            STATUS_LABELS[store.status].className
+        <div>
+          <span
+            className={cn(
+              "inline-block rounded-full px-3 py-1 text-xs font-semibold",
+              STATUS_LABELS[store.status].className
+            )}
+          >
+            {STATUS_LABELS[store.status].label}
+          </span>
+          {store.status === "rejected" && store.rejection_reason && (
+            <p className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">
+              Motif du refus : {store.rejection_reason}
+            </p>
           )}
-        >
-          {STATUS_LABELS[store.status].label}
-        </span>
+        </div>
       )}
 
       <div className="rounded-xl bg-white p-4 ring-1 ring-black/5 sm:p-5">

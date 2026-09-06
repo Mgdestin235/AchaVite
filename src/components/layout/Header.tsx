@@ -1,18 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Menu, ShoppingCart, User, Package, X, ShoppingBag, ShieldCheck } from "lucide-react";
 import { useCartStore } from "@/lib/store/cart";
-import { useAuthStore } from "@/lib/store/auth";
+import { createClient } from "@/lib/supabase/client";
 import { CATEGORIES } from "@/lib/data";
 import { SearchBar } from "./SearchBar";
 
 export function Header() {
+  const supabase = createClient();
   const [menuOpen, setMenuOpen] = useState(false);
   const cartCount = useCartStore((s) => s.lines.reduce((sum, l) => sum + l.qty, 0));
-  const currentPhone = useAuthStore((s) => s.currentPhone);
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => setLoggedIn(!!user));
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      setLoggedIn(!!session);
+    });
+    return () => sub.subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <header className="sticky top-0 z-40 bg-navy shadow-md">
@@ -42,7 +52,7 @@ export function Header() {
           <Menu size={24} />
         </button>
 
-        <Link href="/" className="flex shrink-0 items-center rounded-lg bg-white px-2 py-1.5">
+        <Link href="/boutique" className="flex shrink-0 items-center rounded-lg bg-white px-2 py-1.5">
           <Image
             src="/brand/logo-full.png"
             alt="AchaVite"
@@ -71,11 +81,11 @@ export function Header() {
 
         <div className="ml-auto flex items-center gap-1 sm:ml-0 sm:gap-2">
           <Link
-            href={currentPhone ? "/compte" : "/connexion"}
+            href={loggedIn ? "/compte" : "/connexion"}
             className="hidden items-center gap-1.5 rounded-lg px-2.5 py-2 text-sm font-medium text-white/90 hover:bg-white/10 lg:flex"
           >
             <User size={19} />
-            {currentPhone ? "Mon compte" : "Se connecter"}
+            {loggedIn ? "Mon compte" : "Se connecter"}
           </Link>
           <Link
             href="/compte/commandes"
@@ -134,7 +144,7 @@ export function Header() {
               </button>
             </div>
             <nav className="flex flex-col gap-1">
-              <Link href="/" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-navy/5">
+              <Link href="/boutique" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-navy/5">
                 Accueil
               </Link>
               <Link href="/catalogue" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-navy/5">
@@ -146,8 +156,8 @@ export function Header() {
               <Link href="/suivi" onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-navy/5">
                 Suivi de commande
               </Link>
-              <Link href={currentPhone ? "/compte" : "/connexion"} onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-navy/5">
-                {currentPhone ? "Mon compte" : "Se connecter"}
+              <Link href={loggedIn ? "/compte" : "/connexion"} onClick={() => setMenuOpen(false)} className="rounded-lg px-3 py-2.5 text-sm font-medium text-navy hover:bg-navy/5">
+                {loggedIn ? "Mon compte" : "Se connecter"}
               </Link>
               <p className="mt-3 px-3 text-xs font-semibold uppercase text-gray-400">
                 Catégories
