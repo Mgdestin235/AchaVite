@@ -134,6 +134,31 @@ export function VendorDeliveryClient({ storeId }: { storeId: string }) {
                   Retrait en boutique
                 </label>
               </div>
+
+              {zone.has_relais && (
+                <label className="mt-3 block text-xs text-gray-500">
+                  Points relais disponibles à {zone.city} (un par ligne)
+                  <textarea
+                    defaultValue={zone.relais_points.join("\n")}
+                    onBlur={(e) => {
+                      const points = e.target.value
+                        .split("\n")
+                        .map((p) => p.trim())
+                        .filter(Boolean);
+                      handleUpdate(zone, { relais_points: points });
+                    }}
+                    placeholder="Ex : Marché central&#10;Rond-point Chagoua"
+                    rows={2}
+                    className="mt-1 w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-orange"
+                  />
+                  {zone.relais_points.length === 0 && (
+                    <span className="mt-1 block font-semibold text-orange">
+                      Ajoutez au moins un point relais, sinon vos clients ne pourront pas choisir ce mode de
+                      livraison.
+                    </span>
+                  )}
+                </label>
+              )}
             </div>
           ))}
         </div>

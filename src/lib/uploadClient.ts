@@ -20,6 +20,7 @@ type SignatureResponse = {
   apiKey: string;
   cloudName: string;
   folder: string;
+  maxBytes: number;
   error?: string;
 };
 
@@ -49,6 +50,7 @@ export async function uploadFile(file: File, kind: UploadKind): Promise<string> 
   formData.append("timestamp", String(sigData.timestamp));
   formData.append("signature", sigData.signature);
   formData.append("folder", sigData.folder);
+  formData.append("max_bytes", String(sigData.maxBytes));
 
   const uploadRes = await fetch(
     `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${RESOURCE_TYPE[kind]}/upload`,

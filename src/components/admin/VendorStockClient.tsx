@@ -8,6 +8,24 @@ import { createClient } from "@/lib/supabase/client";
 import { listVendorProducts, updateProductStock, type ProductWithRelations } from "@/lib/db/products";
 import { cn } from "@/lib/cn";
 
+function StockInput({ stock, onCommit }: { stock: number; onCommit: (value: number) => void }) {
+  // Local, uncommitted text so clearing the field to retype a number
+  // doesn't briefly save 0 to the database on every keystroke. The parent
+  // remounts this (via a key including `stock`) whenever the true value
+  // changes externally, instead of syncing it back in with an effect.
+  const [text, setText] = useState(String(stock));
+  return (
+    <input
+      value={text}
+      onChange={(e) => setText(e.target.value)}
+      onBlur={() => onCommit(Math.max(0, Number(text) || 0))}
+      onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
+      inputMode="numeric"
+      className="w-12 border-x border-gray-200 bg-transparent py-1.5 text-center text-sm font-semibold outline-none"
+    />
+  );
+}
+
 export function VendorStockClient({ storeId }: { storeId: string }) {
   const supabase = createClient();
   const [products, setProducts] = useState<ProductWithRelations[]>([]);
@@ -87,11 +105,7 @@ export function VendorStockClient({ storeId }: { storeId: string }) {
                 >
                   <Minus size={15} />
                 </button>
-                <input
-                  value={p.stock}
-                  onChange={(e) => setStock(p.id, Number(e.target.value) || 0)}
-                  className="w-12 border-x border-gray-200 bg-transparent py-1.5 text-center text-sm font-semibold outline-none"
-                />
+                <StockInput key={`${p.id}-${p.stock}`} stock={p.stock} onCommit={(value) => setStock(p.id, value)} />
                 <button
                   onClick={() => adjust(p.id, 1, p.stock)}
                   className="flex h-9 w-9 items-center justify-center text-navy hover:bg-gray-50"

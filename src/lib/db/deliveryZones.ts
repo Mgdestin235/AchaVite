@@ -35,7 +35,9 @@ export async function createZone(
 export async function updateZone(
   supabase: SupabaseClient,
   zoneId: string,
-  patch: Partial<Pick<DeliveryZoneRow, "fee_domicile" | "fee_relais" | "has_relais" | "has_boutique">>
+  patch: Partial<
+    Pick<DeliveryZoneRow, "fee_domicile" | "fee_relais" | "has_relais" | "has_boutique" | "relais_points">
+  >
 ): Promise<{ error: string | null }> {
   const { error } = await supabase.from("delivery_zones").update(patch).eq("id", zoneId);
   return { error: error?.message ?? null };

@@ -109,7 +109,7 @@ export function PaiementPageClient({ orderId }: { orderId: string }) {
     await fetch("/api/orders/set-payment-method", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orderId: order.id, method }),
+      body: JSON.stringify({ orderId: order.id, phone: order.customerPhone, method }),
     });
     updateLastOrder({ paymentMethod: method, whatsappLink: waLink });
 

@@ -15,10 +15,12 @@ export async function listActivePromos(supabase: SupabaseClient): Promise<PromoR
 
 export async function findActivePromoByCode(supabase: SupabaseClient, code: string): Promise<PromoRow | null> {
   const today = new Date().toISOString().slice(0, 10);
+  // Codes are always stored uppercase (see createPromo callers) -- an exact
+  // match avoids ILIKE's "%"/"_" wildcards matching unrelated promo codes.
   const { data } = await supabase
     .from("promos")
     .select("*")
-    .ilike("code", code)
+    .eq("code", code.trim().toUpperCase())
     .eq("active", true)
     .lte("start_date", today)
     .gte("end_date", today)
@@ -49,11 +51,13 @@ export async function createPromo(
   storeId: string,
   input: PromoInput
 ): Promise<{ error: string | null }> {
+  // A percent discount above 100% would make the discounted total negative.
+  const value = input.type === "percent" ? Math.min(Math.max(input.value, 0), 100) : Math.max(input.value, 0);
   const { error } = await supabase.from("promos").insert({
     store_id: storeId,
     code: input.code,
     type: input.type,
-    value: input.value,
+    value,
     start_date: input.startDate,
     end_date: input.endDate,
     max_uses: input.maxUses,

@@ -101,6 +101,7 @@ export function VendorPromotionsClient({ storeId }: { storeId: string }) {
         <input
           type="number"
           min={0}
+          max={form.type === "percent" ? 100 : undefined}
           value={form.value}
           onChange={(e) => setForm({ ...form, value: Number(e.target.value) })}
           placeholder="Valeur"

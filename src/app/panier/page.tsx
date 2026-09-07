@@ -74,9 +74,12 @@ export default function CartPage() {
         .reduce((s, i) => s + Number(i.product.price) * i.line.qty, 0)
     : 0;
   const discount = activePromo
-    ? activePromo.type === "percent"
-      ? Math.round((promoStoreSubtotal * activePromo.value) / 100)
-      : Math.min(activePromo.value, promoStoreSubtotal)
+    ? Math.min(
+        activePromo.type === "percent"
+          ? Math.round((promoStoreSubtotal * activePromo.value) / 100)
+          : activePromo.value,
+        promoStoreSubtotal
+      )
     : 0;
 
   async function handleApplyPromo() {

@@ -42,37 +42,51 @@ export async function createOrder(
     .maybeSingle();
   const commissionPercent = settings?.commission_percent ?? 10;
 
-  const id = crypto.randomUUID();
-  const code = orderCode(id);
   const estimatedDelivery = new Date(Date.now() + 3 * 86400000).toISOString();
 
-  const { data: order, error } = await supabase
-    .from("orders")
-    .insert({
-      id,
-      code,
-      customer_id: input.customer.id ?? null,
-      customer_name: input.customer.name,
-      customer_phone: input.customer.phone,
-      customer_email: input.customer.email || null,
-      customer_city: input.customer.city,
-      customer_address: input.customer.address,
-      customer_neighborhood: input.customer.neighborhood || null,
-      subtotal: input.subtotal,
-      discount: input.discount,
-      promo_code: input.promoCode || null,
-      delivery_fee: input.deliveryFee,
-      total: input.total,
-      delivery_mode: input.deliveryMode,
-      relais_point: input.relaisPoint || null,
-      payment_status: "attente",
-      status: "nouvelle",
-      estimated_delivery: estimatedDelivery,
-    })
-    .select("*")
-    .single();
+  // orders.code has a unique constraint; retry with a freshly generated
+  // id/code on a collision rather than surfacing a raw Postgres error.
+  let order: OrderRow | null = null;
+  let lastError: string | null = null;
+  for (let attempt = 0; attempt < 3 && !order; attempt++) {
+    const id = crypto.randomUUID();
+    const code = orderCode(id);
+    const { data, error } = await supabase
+      .from("orders")
+      .insert({
+        id,
+        code,
+        customer_id: input.customer.id ?? null,
+        customer_name: input.customer.name,
+        customer_phone: input.customer.phone,
+        customer_email: input.customer.email || null,
+        customer_city: input.customer.city,
+        customer_address: input.customer.address,
+        customer_neighborhood: input.customer.neighborhood || null,
+        subtotal: input.subtotal,
+        discount: input.discount,
+        promo_code: input.promoCode || null,
+        delivery_fee: input.deliveryFee,
+        total: input.total,
+        delivery_mode: input.deliveryMode,
+        relais_point: input.relaisPoint || null,
+        payment_status: "attente",
+        status: "nouvelle",
+        estimated_delivery: estimatedDelivery,
+      })
+      .select("*")
+      .single();
 
-  if (error) return { order: null, error: error.message };
+    if (!error) {
+      order = data as OrderRow;
+      break;
+    }
+    lastError = error.message;
+    if (error.code !== "23505") break; // not a unique-violation: retrying won't help
+  }
+
+  if (!order) return { order: null, error: lastError };
+  const id = order.id;
 
   const itemRows = input.items.map((it) => {
     const subtotal = it.price * it.quantity;
@@ -92,14 +106,12 @@ export async function createOrder(
     };
   });
 
+  // Price, commission, vendor payout, store_id and stock are all re-derived
+  // server-side from the real product row by the order_items_recompute
+  // trigger (see 0003_security_hardening.sql) -- what's sent here for those
+  // fields is informational only and gets overwritten.
   const { error: itemsError } = await supabase.from("order_items").insert(itemRows);
   if (itemsError) return { order: order as OrderRow, error: itemsError.message };
-
-  // Best-effort stock decrement; not transactional but acceptable for this scale.
-  for (const it of input.items) {
-    if (!it.productId) continue;
-    await supabase.rpc("decrement_product_stock", { p_product_id: it.productId, p_quantity: it.quantity });
-  }
 
   return { order: order as OrderRow, error: null };
 }
