@@ -13,6 +13,7 @@ import {
   Percent,
   Tags,
   CreditCard,
+  Wallet,
   LogOut,
   Menu,
   ExternalLink,
@@ -29,6 +30,7 @@ const NAV = [
   { href: "/super-admin/commissions", label: "Commissions", icon: Percent },
   { href: "/super-admin/paiements", label: "Paiements", icon: CreditCard },
   { href: "/super-admin/categories", label: "Catégories", icon: Tags },
+  { href: "/super-admin/monetisation", label: "Monétisation", icon: Wallet },
 ];
 
 function Sidebar({ email, onNavigate }: { email: string; onNavigate?: () => void }) {
