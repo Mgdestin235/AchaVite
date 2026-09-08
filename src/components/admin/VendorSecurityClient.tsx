@@ -63,13 +63,27 @@ export function VendorSecurityClient() {
         </div>
       </div>
 
-      <div className="flex items-start gap-3 rounded-xl bg-navy/5 p-4 text-sm text-navy/80 sm:p-5">
-        <CreditCard size={18} className="mt-0.5 shrink-0 text-navy" />
-        <p>
-          Les moyens de paiement (WhatsApp, Mobile Money, virement bancaire) sont désormais
-          configurés au niveau de la plateforme AchaVite, qui collecte le paiement du client puis
-          vous reverse votre part. Vous n&apos;avez rien à configurer ici.
-        </p>
+      <div className="rounded-xl bg-white p-4 ring-1 ring-black/5 sm:p-5">
+        <div className="mb-3 flex items-start gap-3">
+          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-navy text-white">
+            <CreditCard size={20} />
+          </span>
+          <div>
+            <h2 className="text-sm font-bold text-navy">Moyens de paiement</h2>
+            <p className="text-xs text-gray-500">
+              Le paiement des commandes de vos clients reste collecté par AchaVite (qui vous
+              reverse ensuite votre part) — cela ne change pas. Vous pouvez en plus indiquer sur
+              vos fiches produits les moyens de paiement que vous acceptez directement (Orange
+              Money, Wave, espèces à la livraison...), à titre informatif pour vos clients.
+            </p>
+          </div>
+        </div>
+        <Link
+          href="/admin/parametres/paiement"
+          className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-semibold text-navy hover:bg-gray-50"
+        >
+          Gérer mes moyens de paiement
+        </Link>
       </div>
 
       <div className="rounded-xl bg-white p-4 ring-1 ring-black/5 sm:p-5">

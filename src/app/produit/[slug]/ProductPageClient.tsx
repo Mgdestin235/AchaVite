@@ -7,6 +7,7 @@ import { Minus, Plus, ShoppingCart, Star, Zap, ChevronRight, Check, FileText, Bo
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { getPublicProductBySlug, listPublicProducts, toLegacyProduct } from "@/lib/db/products";
+import { listStorePaymentMethods } from "@/lib/db/storePaymentMethods";
 import { useCartStore } from "@/lib/store/cart";
 import { useRecentStore } from "@/lib/store/recent";
 import { CATEGORIES } from "@/lib/data";
@@ -15,7 +16,9 @@ import { Gallery } from "@/components/product/Gallery";
 import { ProductBadges } from "@/components/product/ProductBadges";
 import { ProductCard } from "@/components/product/ProductCard";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { StorePaymentMethodsList } from "@/components/product/StorePaymentMethodsList";
 import type { Product } from "@/lib/types";
+import type { StorePaymentMethod } from "@/lib/db/types";
 
 export function ProductPageClient({ slug }: { slug: string }) {
   const router = useRouter();
@@ -26,6 +29,8 @@ export function ProductPageClient({ slug }: { slug: string }) {
 
   const [product, setProduct] = useState<Product | null | undefined>(undefined);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
+  const [storeName, setStoreName] = useState<string | null>(null);
+  const [paymentMethods, setPaymentMethods] = useState<StorePaymentMethod[]>([]);
   const [qty, setQty] = useState(1);
 
   useEffect(() => {
@@ -35,6 +40,12 @@ export function ProductPageClient({ slug }: { slug: string }) {
         if (cancelled) return;
         setProduct(row ? toLegacyProduct(row) : null);
         setAllProducts(rows.map(toLegacyProduct));
+        setStoreName(row?.stores?.name ?? null);
+        if (row?.store_id) {
+          listStorePaymentMethods(supabase, row.store_id, { activeOnly: true }).then((methods) => {
+            if (!cancelled) setPaymentMethods(methods);
+          });
+        }
       }
     );
     return () => {
@@ -230,6 +241,8 @@ export function ProductPageClient({ slug }: { slug: string }) {
               Acheter maintenant
             </button>
           </div>
+
+          <StorePaymentMethodsList storeName={storeName} methods={paymentMethods} />
         </div>
       </div>
 
