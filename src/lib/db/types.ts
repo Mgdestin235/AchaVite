@@ -172,3 +172,159 @@ export type PlatformSettings = {
   bank_account_number: string | null;
   bank_account_holder: string | null;
 };
+
+// Mirrors supabase/migrations/0004_monetization.sql -- vendor trial/PRO
+// subscriptions billed to the platform. Kept entirely separate from the
+// customer-order money flow above (orders/order_items/payments/platform_settings).
+
+export type PaymentProviderKey = "manual" | "wave" | "orange_money" | "mtn_momo" | "moov_money" | "airtel_money";
+
+export type SubscriptionStatus =
+  | "trial_pending"
+  | "trial_active"
+  | "trial_expired"
+  | "pro_active"
+  | "pro_expired"
+  | "payment_pending"
+  | "payment_failed"
+  | "suspended"
+  | "cancelled";
+
+export type SubscriptionPaymentKind = "trial" | "pro_subscription" | "renewal" | "refund";
+export type SubscriptionPaymentStatus = "pending" | "success" | "failed" | "refunded";
+
+export type Currency = {
+  code: string;
+  name: string;
+  symbol: string;
+};
+
+export type Country = {
+  code: string;
+  name: string;
+  currency_code: string;
+  phone_prefix: string;
+  is_active: boolean;
+};
+
+export type PaymentProviderRow = {
+  provider_key: PaymentProviderKey;
+  display_name: string;
+  is_active: boolean;
+  is_configured: boolean;
+  country_codes: string[];
+  notes: string | null;
+};
+
+export type PlatformPaymentMethod = {
+  id: string;
+  country_code: string | null;
+  provider_key: PaymentProviderKey;
+  label: string;
+  number: string | null;
+  payment_link: string | null;
+  beneficiary_name: string | null;
+  currency_code: string;
+  instructions: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SubscriptionPlan = {
+  id: string;
+  code: string;
+  name: string;
+  price: number;
+  currency_code: string;
+  duration_days: number;
+  features: string[];
+  is_active: boolean;
+  effective_from: string;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SubscriptionPromotion = {
+  id: string;
+  code: string;
+  plan_id: string | null;
+  discount_percent: number | null;
+  discount_amount: number | null;
+  starts_at: string;
+  ends_at: string;
+  max_uses: number;
+  used: number;
+  active: boolean;
+};
+
+export type Subscription = {
+  id: string;
+  store_id: string;
+  plan_id: string | null;
+  status: SubscriptionStatus;
+  trial_activated_at: string | null;
+  trial_expires_at: string | null;
+  pro_activated_at: string | null;
+  current_period_end: string | null;
+  cancel_at_period_end: boolean;
+  last_reminder_sent_days: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type SubscriptionPayment = {
+  id: string;
+  store_id: string;
+  subscription_id: string | null;
+  plan_id: string;
+  kind: SubscriptionPaymentKind;
+  amount: number;
+  currency_code: string;
+  provider_key: PaymentProviderKey;
+  status: SubscriptionPaymentStatus;
+  period_start: string | null;
+  period_end: string | null;
+  reference: string | null;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+  created_at: string;
+};
+
+export type Invoice = {
+  id: string;
+  invoice_number: string;
+  subscription_payment_id: string;
+  store_id: string;
+  amount: number;
+  currency_code: string;
+  period_start: string | null;
+  period_end: string | null;
+  status: SubscriptionPaymentStatus;
+  pdf_url: string | null;
+  created_at: string;
+};
+
+export type StorePaymentMethod = {
+  id: string;
+  store_id: string;
+  provider_key: PaymentProviderKey;
+  label: string;
+  number: string | null;
+  instructions: string | null;
+  is_active: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+};
+
+export type AuditLogRow = {
+  id: string;
+  actor_id: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  metadata: Record<string, unknown>;
+  created_at: string;
+};

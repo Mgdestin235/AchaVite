@@ -82,3 +82,43 @@ export function buildOrderWhatsAppLink(order: WhatsAppOrderInput, whatsappNumber
   const message = buildOrderWhatsAppMessage(order);
   return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
 }
+
+export type WhatsAppSubscriptionInput = {
+  storeName: string;
+  label: string;
+  amount: number;
+  currencySymbol: string;
+  reference: string;
+};
+
+/**
+ * Same manual-confirmation pattern as buildOrderWhatsAppLink(), but for a
+ * vendor paying AchaVite directly (trial fee / PRO subscription) rather
+ * than a customer paying a vendor. Kept separate from the order message
+ * builder since these are two distinct money flows (see
+ * 0004_monetization.sql) that must never be confused in the confirmation
+ * text a Super Admin reads.
+ */
+export function buildSubscriptionWhatsAppMessage(input: WhatsAppSubscriptionInput): string {
+  const lines = [
+    `Bonjour AchaVite 👋`,
+    ``,
+    `Je viens d'effectuer le paiement pour : *${input.label}*.`,
+    `Montant : ${input.amount.toLocaleString("fr-FR")} ${input.currencySymbol}`,
+    `Boutique : ${input.storeName}`,
+    `Référence : ${input.reference}`,
+    ``,
+    `Merci de confirmer la réception de mon paiement pour activer mon abonnement.`,
+  ];
+  return lines.join("\n");
+}
+
+export function buildSubscriptionWhatsAppLink(
+  input: WhatsAppSubscriptionInput,
+  whatsappNumber: string | null
+): string | null {
+  const digits = normalizePhoneForWhatsApp(whatsappNumber ?? "");
+  if (!digits) return null;
+  const message = buildSubscriptionWhatsAppMessage(input);
+  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+}
