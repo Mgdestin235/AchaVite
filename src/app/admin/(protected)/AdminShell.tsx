@@ -15,6 +15,7 @@ import {
   Menu,
   ExternalLink,
   Settings,
+  CreditCard,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { cn } from "@/lib/cn";
@@ -27,6 +28,7 @@ const NAV = [
   { href: "/admin/stock", label: "Stock", icon: Package },
   { href: "/admin/promotions", label: "Promotions", icon: BadgePercent },
   { href: "/admin/livraison", label: "Livraison", icon: Truck },
+  { href: "/admin/abonnement", label: "Abonnement", icon: CreditCard },
   { href: "/admin/parametres", label: "Paramètres", icon: Settings },
 ];
 
