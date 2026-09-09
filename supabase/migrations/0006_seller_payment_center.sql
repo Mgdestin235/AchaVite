@@ -23,6 +23,13 @@
 -- ---------------------------------------------------------------------------
 -- 1. New provider types (in addition to manual/wave/orange_money/mtn_momo/
 --    moov_money/airtel_money from 0004).
+--
+-- !! RUN THIS SECTION ON ITS OWN, THEN RUN THE REST SEPARATELY !!
+-- Postgres refuses to use a brand-new enum value in the same transaction
+-- that created it ("unsafe use of new value ... must be committed before
+-- they can be used"), and the Supabase SQL editor runs a whole pasted
+-- script as one transaction. Splitting this into two paste-and-run steps
+-- is what lets section 4 below insert rows using these values.
 -- ---------------------------------------------------------------------------
 do $$ begin
   alter type payment_provider_key add value if not exists 'free_money';
@@ -42,6 +49,10 @@ exception when duplicate_object then null; end $$;
 do $$ begin
   alter type payment_provider_key add value if not exists 'qr';
 exception when duplicate_object then null; end $$;
+
+-- ---------------------------------------------------------------------------
+-- >>> STOP HERE, RUN, THEN PASTE+RUN EVERYTHING BELOW AS A SECOND STEP <<<
+-- ---------------------------------------------------------------------------
 
 -- ---------------------------------------------------------------------------
 -- 2. More countries (Ghana, Nigeria) + a currency each.
