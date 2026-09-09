@@ -219,6 +219,14 @@ export default async function LandingPage() {
             </p>
             <div className="flex flex-wrap gap-2">
               <Link
+                href="/avis-important"
+                className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gray-100"
+              >
+                <FileText size={13} />
+                Avis important — Rôle de la plateforme
+                <ArrowRight size={12} />
+              </Link>
+              <Link
                 href="/conditions"
                 className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gray-100"
               >
@@ -231,51 +239,10 @@ export default async function LandingPage() {
                 className="flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-semibold text-navy hover:bg-gray-100"
               >
                 <ShieldCheck size={13} />
-                Confidentialité
+                Politique de confidentialité
                 <ArrowRight size={12} />
               </Link>
             </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Legal disclaimer -- verbatim text provided by the platform owner */}
-      {/* TODO: validation juridique avant mise en production */}
-      <div className="bg-gray-50 px-4 py-14 sm:px-6">
-        <div className="mx-auto max-w-2xl rounded-2xl bg-white p-6 ring-1 ring-black/5 sm:p-8">
-          <h2 className="mb-4 text-center text-base font-extrabold text-navy sm:text-lg">
-            AVIS IMPORTANT — RÔLE DE LA PLATEFORME
-          </h2>
-          <div className="space-y-3 text-sm leading-relaxed text-gray-600">
-            <p>
-              « Cette plateforme est un service numérique de mise en relation entre acheteurs et
-              vendeurs. Elle facilite la présentation des produits et services, la prospection de
-              clients et la mise en relation des utilisateurs.
-            </p>
-            <p>
-              La plateforme ne participe pas directement à la conclusion, à la négociation ou à
-              l&apos;exécution des ventes conclues entre acheteurs et vendeurs et ne se substitue pas
-              aux parties dans leur relation commerciale.
-            </p>
-            <p>
-              Les vendeurs sont responsables des produits et services qu&apos;ils proposent, de
-              l&apos;exactitude des informations publiées, de leurs prix, de leurs conditions de vente
-              ainsi que du respect des obligations légales qui leur sont applicables.
-            </p>
-            <p>
-              Les acheteurs sont responsables de leurs décisions d&apos;achat et des informations
-              qu&apos;ils communiquent dans le cadre de leurs transactions.
-            </p>
-            <p>
-              La plateforme met en œuvre des mesures destinées à protéger les données personnelles et
-              les informations des utilisateurs conformément à sa politique de confidentialité et aux
-              règles applicables.
-            </p>
-            <p>
-              En utilisant la plateforme, chaque utilisateur reconnaît comprendre le rôle limité de la
-              plateforme en tant qu&apos;intermédiaire numérique de mise en relation et accepte les
-              conditions générales d&apos;utilisation. »
-            </p>
           </div>
         </div>
       </div>
