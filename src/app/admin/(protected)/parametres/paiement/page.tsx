@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getStoreByOwner } from "@/lib/db/stores";
-import { StorePaymentMethodsClient } from "@/components/admin/StorePaymentMethodsClient";
+import { VendorPaymentCenterClient } from "@/components/admin/VendorPaymentCenterClient";
 import { NoStoreNotice } from "@/components/admin/NoStoreNotice";
 
 export default async function ParametresPaiementPage() {
@@ -14,5 +14,5 @@ export default async function ParametresPaiementPage() {
     return <NoStoreNotice message="Vous devez configurer votre boutique avant de gérer vos moyens de paiement." />;
   }
 
-  return <StorePaymentMethodsClient storeId={store.id} />;
+  return <VendorPaymentCenterClient store={store} />;
 }

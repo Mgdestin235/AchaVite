@@ -7,6 +7,12 @@ import {
   mtnMomoProvider,
   moovMoneyProvider,
   airtelMoneyProvider,
+  freeMoneyProvider,
+  tmoneyProvider,
+  floozProvider,
+  bankTransferProvider,
+  cardProvider,
+  qrProvider,
 } from "./providers/stub";
 
 /**
@@ -29,5 +35,17 @@ export function getProvider(key: PaymentProviderKey, whatsappNumber: string | nu
       return moovMoneyProvider;
     case "airtel_money":
       return airtelMoneyProvider;
+    case "free_money":
+      return freeMoneyProvider;
+    case "tmoney":
+      return tmoneyProvider;
+    case "flooz":
+      return floozProvider;
+    case "bank_transfer":
+      return bankTransferProvider;
+    case "card":
+      return cardProvider;
+    case "qr":
+      return qrProvider;
   }
 }

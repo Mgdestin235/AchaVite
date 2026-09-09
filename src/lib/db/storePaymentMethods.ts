@@ -17,6 +17,8 @@ export type StorePaymentMethodInput = {
   providerKey: PaymentProviderKey;
   label: string;
   number?: string;
+  accountName?: string;
+  merchantId?: string;
   instructions?: string;
 };
 
@@ -30,6 +32,8 @@ export async function createStorePaymentMethod(
     provider_key: input.providerKey,
     label: input.label,
     number: input.number || null,
+    account_name: input.accountName || null,
+    merchant_id: input.merchantId || null,
     instructions: input.instructions || null,
   });
   return { error: error?.message ?? null };
@@ -38,10 +42,20 @@ export async function createStorePaymentMethod(
 export async function updateStorePaymentMethod(
   supabase: SupabaseClient,
   id: string,
-  patch: Partial<Pick<StorePaymentMethod, "label" | "number" | "instructions" | "is_active" | "sort_order">>
+  patch: Partial<
+    Pick<
+      StorePaymentMethod,
+      "label" | "number" | "account_name" | "merchant_id" | "instructions" | "is_active" | "is_default" | "sort_order"
+    >
+  >
 ): Promise<{ error: string | null }> {
   const { error } = await supabase.from("store_payment_methods").update(patch).eq("id", id);
   return { error: error?.message ?? null };
+}
+
+/** Convenience wrapper -- the single-default rule itself is enforced server-side by a trigger (0006). */
+export async function setDefaultStorePaymentMethod(supabase: SupabaseClient, id: string): Promise<{ error: string | null }> {
+  return updateStorePaymentMethod(supabase, id, { is_default: true });
 }
 
 export async function deleteStorePaymentMethod(

@@ -41,6 +41,7 @@ export type Store = {
   category_id: string | null;
   opening_hours: string | null;
   delivery_info: string | null;
+  country_code: string | null;
   status: StoreStatus;
   rejection_reason: string | null;
   created_at: string;
@@ -177,7 +178,19 @@ export type PlatformSettings = {
 // subscriptions billed to the platform. Kept entirely separate from the
 // customer-order money flow above (orders/order_items/payments/platform_settings).
 
-export type PaymentProviderKey = "manual" | "wave" | "orange_money" | "mtn_momo" | "moov_money" | "airtel_money";
+export type PaymentProviderKey =
+  | "manual"
+  | "wave"
+  | "orange_money"
+  | "mtn_momo"
+  | "moov_money"
+  | "airtel_money"
+  | "free_money"
+  | "tmoney"
+  | "flooz"
+  | "bank_transfer"
+  | "card"
+  | "qr";
 
 export type SubscriptionStatus =
   | "trial_pending"
@@ -312,12 +325,19 @@ export type StorePaymentMethod = {
   provider_key: PaymentProviderKey;
   label: string;
   number: string | null;
+  account_name: string | null;
+  merchant_id: string | null;
   instructions: string | null;
   is_active: boolean;
+  is_default: boolean;
+  metadata: Record<string, unknown>;
   sort_order: number;
   created_at: string;
   updated_at: string;
 };
+
+/** Mirrors migration 0006 -- inert until the direct-to-seller checkout phase ships. */
+export type OrderPaymentMode = "platform" | "direct_to_seller";
 
 export type AuditLogRow = {
   id: string;
