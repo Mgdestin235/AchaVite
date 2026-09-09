@@ -30,6 +30,11 @@ export function VendorSecurityClient() {
     toast.success("Double authentification activée");
   }
 
+  // Skipping must not claim 2FA got enabled -- it didn't.
+  function handleSkip() {
+    setEnrolling(false);
+  }
+
   return (
     <div className="max-w-2xl space-y-6">
       <h1 className="text-xl font-bold text-navy">Paramètres</h1>
@@ -100,7 +105,7 @@ export function VendorSecurityClient() {
         {mfaEnabled === null ? (
           <p className="text-sm text-gray-400">Vérification en cours...</p>
         ) : enrolling ? (
-          <MfaEnroll onDone={handleDone} />
+          <MfaEnroll onDone={handleDone} onSkip={handleSkip} />
         ) : mfaEnabled ? (
           <div className="flex items-center gap-2 rounded-lg bg-green-50 px-3 py-2.5 text-sm font-semibold text-green-700">
             <ShieldCheck size={16} />

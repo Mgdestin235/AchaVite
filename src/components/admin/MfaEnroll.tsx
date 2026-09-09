@@ -4,7 +4,13 @@ import { useEffect, useState } from "react";
 import { ShieldCheck, ShieldAlert, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 
-export function MfaEnroll({ onDone }: { onDone: () => void }) {
+export function MfaEnroll({ onDone, onSkip }: { onDone: () => void; onSkip?: () => void }) {
+  // "Continuer sans 2FA" must never look like a successful verification to
+  // the caller -- VendorSecurityClient used to treat them identically and
+  // ended up telling the vendor "Double authentification activée" (with a
+  // green badge) right after they explicitly skipped it. Callers that don't
+  // need to distinguish the two (signup, login) can simply omit onSkip.
+  const handleSkip = onSkip ?? onDone;
   const supabase = createClient();
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [secret, setSecret] = useState("");
@@ -100,7 +106,7 @@ export function MfaEnroll({ onDone }: { onDone: () => void }) {
           >
             Réessayer
           </button>
-          <button onClick={onDone} className="text-xs font-medium text-gray-400 underline hover:text-gray-600">
+          <button onClick={handleSkip} className="text-xs font-medium text-gray-400 underline hover:text-gray-600">
             Continuer sans 2FA pour l&apos;instant
           </button>
         </div>
@@ -134,7 +140,7 @@ export function MfaEnroll({ onDone }: { onDone: () => void }) {
           </button>
           <button
             type="button"
-            onClick={onDone}
+            onClick={handleSkip}
             className="mt-3 block w-full text-center text-xs font-medium text-gray-400 underline hover:text-gray-600"
           >
             Continuer sans 2FA pour l&apos;instant
