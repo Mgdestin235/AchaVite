@@ -3,19 +3,20 @@ import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
 import { listActiveSubscriptions, setSubscriptionStatus } from "@/lib/db/subscriptions";
 import { logAudit } from "@/lib/db/auditLogs";
-import { computeSubscriptionStatus, daysUntil, nextReminderDay } from "@/lib/payments/pricing";
+import { getActivePlan } from "@/lib/db/subscriptionPlans";
+import { formatFCFA } from "@/lib/format";
+import { buildReminderMessage, decideSubscriptionAction, reminderKindFor } from "@/lib/payments/subscriptionLifecycle";
 
 /**
  * Daily cron (see vercel.json, 07:00 UTC). Vercel automatically sends
  * `Authorization: Bearer <CRON_SECRET>` for scheduled invocations once the
  * CRON_SECRET env var is set on the project -- we just verify it matches.
  *
- * Two jobs in one pass over every trial_active/pro_active subscription:
- *  1. flip truly-expired ones to trial_expired/pro_expired (server-derived,
- *     never trusts the client) and notify the vendor once.
- *  2. for the rest, fire a reminder at the 30/15/7/3/1/0-day marks,
- *     deduplicated via subscriptions.last_reminder_sent_days so a given
- *     milestone is never notified twice even if the cron reruns same-day.
+ * All the "what should happen to this subscription" branching lives in
+ * decideSubscriptionAction() (src/lib/payments/subscriptionLifecycle.ts),
+ * fully unit-tested. This route is just the I/O shell: run that decision
+ * for every trial_active/pro_active subscription, then execute whichever
+ * of the two possible actions it returns.
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const secret = process.env.CRON_SECRET;
@@ -29,14 +30,25 @@ export async function GET(request: Request): Promise<NextResponse> {
   const resendKey = process.env.RESEND_API_KEY;
   const resend = resendKey ? new Resend(resendKey) : null;
 
+  // The PRO price is always read live from subscription_plans, never
+  // hardcoded in a reminder message -- same rule as the pricing cards.
+  const proPlan = await getActivePlan(supabase, "pro_monthly");
+  const proPriceLabel = proPlan ? `${formatFCFA(Number(proPlan.price))}/mois` : "un tarif visible dans votre espace vendeur";
+
   let expiredCount = 0;
   let reminderCount = 0;
 
   for (const sub of subscriptions) {
-    const effectiveStatus = computeSubscriptionStatus(sub);
+    const action = decideSubscriptionAction(sub);
+    if (action.type === "noop") continue;
 
-    if (effectiveStatus !== sub.status) {
-      const { error } = await setSubscriptionStatus(supabase, sub.id, effectiveStatus);
+    const { data: store } = await supabase.from("stores").select("owner_id, name").eq("id", sub.store_id).maybeSingle();
+    if (!store) continue;
+
+    const kind = reminderKindFor(sub);
+
+    if (action.type === "expire") {
+      const { error } = await setSubscriptionStatus(supabase, sub.id, action.newStatus);
       if (error) continue;
       expiredCount++;
 
@@ -45,43 +57,34 @@ export async function GET(request: Request): Promise<NextResponse> {
         action: "subscription.auto_expired",
         entityType: "subscription",
         entityId: sub.id,
-        metadata: { from: sub.status, to: effectiveStatus },
+        metadata: { from: sub.status, to: action.newStatus },
       });
 
-      const { data: store } = await supabase.from("stores").select("owner_id, name").eq("id", sub.store_id).maybeSingle();
-      if (store) {
-        await supabase.from("notifications").insert({
-          user_id: store.owner_id,
-          title: "Abonnement expiré",
-          message: `L'abonnement de votre boutique "${store.name}" a expiré. Renouvelez pour retrouver l'accès complet à votre espace vendeur.`,
-          kind: "subscription_expired",
-          metadata: { subscription_id: sub.id },
-        });
-        await sendReminderEmail(resend, supabase, store.owner_id, "Abonnement expiré", `L'abonnement de votre boutique "${store.name}" a expiré. Renouvelez pour retrouver l'accès complet.`);
-      }
+      // Semantically identical to hitting the J-0 milestone, so reuse the
+      // same wording rather than maintaining a second "expired" message.
+      const { title, message } = buildReminderMessage(kind, 0, proPriceLabel);
+      await supabase.from("notifications").insert({
+        user_id: store.owner_id,
+        title,
+        message,
+        kind: "subscription_expired",
+        metadata: { subscription_id: sub.id },
+      });
+      await sendReminderEmail(resend, supabase, store.owner_id, title, message);
       continue;
     }
 
-    const expiry = sub.status === "pro_active" ? sub.current_period_end : sub.trial_expires_at;
-    const remaining = daysUntil(expiry);
-    const milestone = nextReminderDay(remaining);
-    if (milestone === null || milestone === sub.last_reminder_sent_days) continue;
-
-    const { data: store } = await supabase.from("stores").select("owner_id, name").eq("id", sub.store_id).maybeSingle();
-    if (!store) continue;
-
-    const label = milestone === 0 ? "expire aujourd'hui" : `expire dans ${milestone} jour${milestone > 1 ? "s" : ""}`;
-    const message = `L'abonnement de votre boutique "${store.name}" ${label}.`;
-
+    // action.type === "remind"
+    const { title, message } = buildReminderMessage(kind, action.milestone, proPriceLabel);
     await supabase.from("notifications").insert({
       user_id: store.owner_id,
-      title: "Rappel d'abonnement",
+      title,
       message,
       kind: "subscription_reminder",
-      metadata: { subscription_id: sub.id, days_remaining: milestone },
+      metadata: { subscription_id: sub.id, days_remaining: action.milestone },
     });
-    await sendReminderEmail(resend, supabase, store.owner_id, "Rappel d'abonnement AchaVite", message);
-    await supabase.from("subscriptions").update({ last_reminder_sent_days: milestone }).eq("id", sub.id);
+    await sendReminderEmail(resend, supabase, store.owner_id, title, message);
+    await supabase.from("subscriptions").update({ last_reminder_sent_days: action.milestone }).eq("id", sub.id);
     reminderCount++;
   }
 

@@ -1,18 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { setSubscriptionStatus } from "@/lib/db/subscriptions";
+import { listAllSubscriptionPayments } from "@/lib/db/subscriptionPayments";
 import { daysUntil } from "@/lib/payments/pricing";
 import type { Subscription, SubscriptionStatus } from "@/lib/db/types";
 
-type SubscriptionWithStore = Subscription & { stores: { name: string } | null };
+type SubscriptionWithStore = Subscription & { stores: { name: string; profiles: { name: string | null } | null } | null };
 
 const STATUS_LABELS: Record<SubscriptionStatus, string> = {
-  trial_pending: "Essai non activé",
-  trial_active: "Essai actif",
-  trial_expired: "Essai expiré",
+  trial_pending: "Free non activé",
+  trial_active: "Free actif",
+  trial_expired: "Free expiré",
   pro_active: "PRO actif",
   pro_expired: "PRO expiré",
   payment_pending: "Paiement en attente",
@@ -33,20 +34,37 @@ const STATUS_COLORS: Record<SubscriptionStatus, string> = {
   cancelled: "bg-gray-100 text-gray-600",
 };
 
+// "Expire bientôt" isn't a stored status -- it's trial_active/pro_active
+// with 7 days or fewer left, computed live like the vendor portal does.
+const EXPIRING_SOON = "__expiring_soon__" as const;
+type FilterValue = SubscriptionStatus | typeof EXPIRING_SOON | "";
+
 export default function AbonnementsPage() {
   const supabase = createClient();
   const [subs, setSubs] = useState<SubscriptionWithStore[]>([]);
+  const [lastPaymentByStore, setLastPaymentByStore] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<SubscriptionStatus | "">("");
+  const [filter, setFilter] = useState<FilterValue>("");
   const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    let query = supabase.from("subscriptions").select("*, stores(name)").order("created_at", { ascending: false });
-    if (filter) query = query.eq("status", filter);
-    query.then(({ data }) => {
+    let query = supabase
+      .from("subscriptions")
+      .select("*, stores(name, profiles(name))")
+      .order("created_at", { ascending: false });
+    if (filter && filter !== EXPIRING_SOON) query = query.eq("status", filter);
+
+    Promise.all([query, listAllSubscriptionPayments(supabase, { status: "success" })]).then(([{ data }, payments]) => {
       if (cancelled) return;
       setSubs((data as unknown as SubscriptionWithStore[]) ?? []);
+      const latest = new Map<string, string>();
+      for (const p of payments) {
+        if (!latest.has(p.store_id) || p.created_at > (latest.get(p.store_id) ?? "")) {
+          latest.set(p.store_id, p.created_at);
+        }
+      }
+      setLastPaymentByStore(latest);
       setLoading(false);
     });
     return () => {
@@ -54,6 +72,16 @@ export default function AbonnementsPage() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, refreshKey]);
+
+  const visible = useMemo(() => {
+    if (filter !== EXPIRING_SOON) return subs;
+    return subs.filter((sub) => {
+      if (sub.status !== "trial_active" && sub.status !== "pro_active") return false;
+      const expiry = sub.status === "pro_active" ? sub.current_period_end : sub.trial_expires_at;
+      const remaining = daysUntil(expiry);
+      return remaining !== null && remaining >= 0 && remaining <= 7;
+    });
+  }, [subs, filter]);
 
   async function handleSetStatus(sub: Subscription, status: SubscriptionStatus) {
     const { error } = await setSubscriptionStatus(supabase, sub.id, status);
@@ -69,10 +97,11 @@ export default function AbonnementsPage() {
     <div>
       <select
         value={filter}
-        onChange={(e) => setFilter(e.target.value as SubscriptionStatus | "")}
+        onChange={(e) => setFilter(e.target.value as FilterValue)}
         className="mb-4 rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-orange"
       >
         <option value="">Tous les statuts</option>
+        <option value={EXPIRING_SOON}>Expire bientôt (≤ 7 jours)</option>
         {(Object.keys(STATUS_LABELS) as SubscriptionStatus[]).map((s) => (
           <option key={s} value={s}>{STATUS_LABELS[s]}</option>
         ))}
@@ -80,25 +109,29 @@ export default function AbonnementsPage() {
 
       {loading ? (
         <p className="py-10 text-center text-sm text-gray-400">Chargement...</p>
-      ) : subs.length === 0 ? (
+      ) : visible.length === 0 ? (
         <p className="rounded-xl bg-white py-10 text-center text-sm text-gray-400 ring-1 ring-black/5">Aucun abonnement.</p>
       ) : (
         <div className="overflow-x-auto rounded-xl bg-white ring-1 ring-black/5">
-          <table className="w-full min-w-[720px] text-left text-sm">
+          <table className="w-full min-w-[880px] text-left text-sm">
             <thead>
               <tr className="border-b border-gray-100 text-xs uppercase text-gray-400">
+                <th className="px-4 py-3">Vendeur</th>
                 <th className="px-4 py-3">Boutique</th>
                 <th className="px-4 py-3">Statut</th>
                 <th className="px-4 py-3">Expiration</th>
+                <th className="px-4 py-3">Dernier paiement</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {subs.map((sub) => {
+              {visible.map((sub) => {
                 const expiry = sub.status === "pro_active" ? sub.current_period_end : sub.trial_expires_at;
                 const remaining = daysUntil(expiry);
+                const lastPayment = lastPaymentByStore.get(sub.store_id);
                 return (
                   <tr key={sub.id} className="border-b border-gray-50 last:border-0">
+                    <td className="px-4 py-3 text-gray-600">{sub.stores?.profiles?.name ?? "—"}</td>
                     <td className="px-4 py-3 font-medium text-navy">{sub.stores?.name ?? "—"}</td>
                     <td className="px-4 py-3">
                       <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[sub.status]}`}>
@@ -107,6 +140,9 @@ export default function AbonnementsPage() {
                     </td>
                     <td className="px-4 py-3 text-gray-500">
                       {expiry ? `${new Date(expiry).toLocaleDateString("fr-FR")} (${remaining}j)` : "—"}
+                    </td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {lastPayment ? new Date(lastPayment).toLocaleDateString("fr-FR") : "—"}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex justify-end gap-2">
