@@ -371,3 +371,16 @@ drop trigger if exists audit_subscriptions on public.subscriptions;
 create trigger audit_subscriptions
   after update on public.subscriptions
   for each row execute function public.audit_row_change();
+
+-- ---------------------------------------------------------------------------
+-- 7. Refresh the seeded plan feature lists to match the updated homepage
+--    pricing cards -- content only, no schema change. Admin-editable
+--    afterwards from /super-admin/monetisation/plans as always.
+-- ---------------------------------------------------------------------------
+update public.subscription_plans
+set features = '["Boutique en ligne", "Ajout de produits illimité", "Réception de commandes", "Découverte de la plateforme", "Support standard"]'
+where code = 'trial';
+
+update public.subscription_plans
+set features = '["Toutes les fonctionnalités du Mode Free", "Mise en avant de votre boutique", "Statistiques avancées", "Outils pour booster vos ventes", "Support prioritaire"]'
+where code = 'pro_monthly';

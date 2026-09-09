@@ -10,6 +10,9 @@ import {
   User,
   FileText,
   Truck,
+  Sparkles,
+  Calendar,
+  Crown,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getActivePlan } from "@/lib/db/subscriptionPlans";
@@ -67,11 +70,31 @@ export default async function LandingPage() {
           <path d="M0 60 C 150 20, 320 80, 500 30 L 500 100 L 0 100 Z" fill="var(--color-navy-light)" opacity="0.6" />
           <path d="M260 100 C 330 50, 430 40, 500 65 L 500 100 Z" fill="var(--color-orange)" />
         </svg>
-        <div className="relative z-10">
-          <h1 className="text-2xl font-extrabold text-white sm:text-3xl">
-            Bienvenue sur Acha<span className="text-orange">Vite</span>
-          </h1>
-          <p className="mt-1.5 text-sm text-white/70">La marketplace 100% africaine</p>
+        <div className="relative z-10 flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="mb-1 text-sm text-white/80">👋 Bonjour,</p>
+            <h1 className="text-2xl font-extrabold text-white sm:text-3xl">
+              Bienvenue sur Acha<span className="text-orange">Vite</span>
+            </h1>
+            <p className="mt-1.5 text-sm font-semibold text-blue-300">La marketplace 100% africaine</p>
+            <p className="mt-1 text-xs text-white/60 sm:text-sm">Achetez, vendez et développez votre activité.</p>
+          </div>
+
+          {/* Decorative illustration -- hidden on very narrow phones so the
+              text never has to compete with it for space. */}
+          <div className="relative hidden h-28 w-28 shrink-0 sm:flex sm:h-32 sm:w-32 sm:items-center sm:justify-center">
+            <div className="absolute h-24 w-24 rounded-full bg-orange/25 blur-xl sm:h-28 sm:w-28" />
+            <div className="relative flex h-20 w-14 flex-col items-center justify-center gap-2 rounded-2xl border-2 border-white/30 bg-white/10 shadow-lg backdrop-blur-sm sm:h-24 sm:w-16">
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-orange text-white shadow sm:h-8 sm:w-8">
+                <Store size={14} />
+              </span>
+              <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white text-navy shadow sm:h-8 sm:w-8">
+                <ShoppingCart size={14} />
+              </span>
+            </div>
+            <Sparkles size={16} className="absolute -right-1 top-3 text-orange" />
+            <Sparkles size={11} className="absolute -left-1 bottom-5 text-white/70" />
+          </div>
         </div>
       </div>
 
@@ -86,7 +109,9 @@ export default async function LandingPage() {
               <span className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/40">
                 <ShoppingBag size={20} />
               </span>
-              <ArrowRight size={18} className="mt-1.5 transition-transform group-hover:translate-x-1" />
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-orange shadow transition-transform group-hover:translate-x-1">
+                <ArrowRight size={16} />
+              </span>
             </div>
             <div>
               <h2 className="text-base font-bold leading-tight">Devenir acheteur</h2>
@@ -103,7 +128,9 @@ export default async function LandingPage() {
               <span className="flex h-11 w-11 items-center justify-center rounded-full border-2 border-white/40">
                 <Store size={20} />
               </span>
-              <ArrowRight size={18} className="mt-1.5 transition-transform group-hover:translate-x-1" />
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-blue-600 shadow transition-transform group-hover:translate-x-1">
+                <ArrowRight size={16} />
+              </span>
             </div>
             <div>
               <h2 className="text-base font-bold leading-tight">Devenir vendeur</h2>
@@ -128,24 +155,43 @@ export default async function LandingPage() {
 
         {/* Pricing: prices/features are always fetched live from subscription_plans, never hardcoded */}
         <div className="mt-10">
-          <h2 className="text-xl font-extrabold text-navy">Nos offres vendeurs</h2>
-          <span className="mt-1.5 block h-1 w-10 rounded-full bg-orange" />
+          <div className="flex items-end justify-between">
+            <div>
+              <h2 className="text-xl font-extrabold text-navy">Nos offres vendeurs</h2>
+              <span className="mt-1.5 block h-1 w-10 rounded-full bg-orange" />
+            </div>
+            <Link href="/admin/inscription" className="text-xs font-semibold text-blue-600">
+              En savoir plus →
+            </Link>
+          </div>
 
           <div className="mt-5 grid grid-cols-2 gap-3">
             <div className="flex flex-col rounded-2xl bg-blue-50 p-4 ring-1 ring-black/5">
-              <span className="mb-2 w-fit rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-700">
-                Mode Free
-              </span>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="w-fit rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-700">
+                  Mode Free
+                </span>
+                <span className="flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-blue-700 ring-1 ring-blue-100">
+                  <Calendar size={11} />
+                  {trialPlan ? Math.round(trialPlan.duration_days / 30) : 3} mois
+                </span>
+              </div>
               <p className="text-xl font-extrabold text-navy sm:text-2xl">
                 {trialPlan ? formatFCFA(Number(trialPlan.price)) : "—"}
               </p>
               <p className="mb-3 text-xs text-gray-500">
-                Essai de {trialPlan ? Math.round(trialPlan.duration_days / 30) : 3} mois
+                Testez AchaVite pendant {trialPlan ? Math.round(trialPlan.duration_days / 30) : 3} mois
               </p>
               <ul className="mb-4 flex-1 space-y-1.5 text-xs text-gray-600">
                 {(trialPlan?.features?.length
                   ? trialPlan.features
-                  : ["Boutique en ligne", "Ajout de produits illimité", "Réception de commandes", "Support standard"]
+                  : [
+                      "Boutique en ligne",
+                      "Ajout de produits illimité",
+                      "Réception de commandes",
+                      "Découverte de la plateforme",
+                      "Support standard",
+                    ]
                 ).map((f) => (
                   <li key={f} className="flex items-start gap-1.5">
                     <Check size={14} className="mt-0.5 shrink-0 text-green-600" />
@@ -157,23 +203,35 @@ export default async function LandingPage() {
                 href="/admin/inscription"
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-navy px-3 py-2.5 text-xs font-bold text-white hover:bg-navy-light"
               >
-                Commencer l&apos;essai
+                Commencer mes {trialPlan ? Math.round(trialPlan.duration_days / 30) : 3} mois d&apos;essai
                 <ArrowRight size={14} />
               </Link>
             </div>
 
             <div className="flex flex-col rounded-2xl bg-orange-light p-4 ring-2 ring-orange">
-              <span className="mb-2 w-fit rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-dark">
-                Mode Pro
-              </span>
+              <div className="mb-2 flex items-center justify-between">
+                <span className="w-fit rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-dark">
+                  Mode Pro
+                </span>
+                <span className="flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-orange-dark ring-1 ring-orange/20">
+                  <Crown size={11} />
+                  Pro
+                </span>
+              </div>
               <p className="text-xl font-extrabold text-navy sm:text-2xl">
                 {proPlan ? `${formatFCFA(Number(proPlan.price))} / mois` : "—"}
               </p>
-              <p className="mb-3 text-xs text-gray-500">Abonnement mensuel, sans engagement</p>
+              <p className="mb-3 text-xs text-gray-500">Passez à la version professionnelle</p>
               <ul className="mb-4 flex-1 space-y-1.5 text-xs text-gray-600">
                 {(proPlan?.features?.length
                   ? proPlan.features
-                  : ["Tout l'essai", "Mise en avant dans le catalogue", "Statistiques avancées", "Support prioritaire"]
+                  : [
+                      "Toutes les fonctionnalités du Mode Free",
+                      "Mise en avant de votre boutique",
+                      "Statistiques avancées",
+                      "Outils pour booster vos ventes",
+                      "Support prioritaire",
+                    ]
                 ).map((f) => (
                   <li key={f} className="flex items-start gap-1.5">
                     <Check size={14} className="mt-0.5 shrink-0 text-green-600" />
@@ -185,7 +243,7 @@ export default async function LandingPage() {
                 href="/admin/inscription"
                 className="flex items-center justify-center gap-1.5 rounded-xl bg-orange px-3 py-2.5 text-xs font-bold text-white hover:bg-orange-dark"
               >
-                Passer au Pro
+                Passer au Mode Pro
                 <ArrowRight size={14} />
               </Link>
             </div>
@@ -194,8 +252,13 @@ export default async function LandingPage() {
 
         {/* Comment ça marche */}
         <div className="mt-10">
-          <h2 className="text-xl font-extrabold text-navy">Comment ça marche ?</h2>
-          <span className="mt-1.5 block h-1 w-10 rounded-full bg-orange" />
+          <div className="flex items-end justify-between">
+            <div>
+              <h2 className="text-xl font-extrabold text-navy">Comment ça marche ?</h2>
+              <span className="mt-1.5 block h-1 w-10 rounded-full bg-orange" />
+            </div>
+            <span className="text-xs text-gray-400">Simple • Rapide • Efficace</span>
+          </div>
 
           <div className="mt-6 flex items-start justify-between">
             {STEPS.map((step, i) => (
@@ -228,8 +291,8 @@ export default async function LandingPage() {
           <div className="min-w-0 flex-1">
             <p className="mb-1 text-sm font-bold text-navy">Informations importantes</p>
             <p className="mb-3 text-xs leading-relaxed text-gray-500">
-              En utilisant AchaVite, vous acceptez nos conditions générales et notre politique de
-              confidentialité.
+              AchaVite est une plateforme de mise en relation entre acheteurs et vendeurs. Chaque
+              vendeur reste responsable de ses produits, prix et conditions de vente.
             </p>
             <div className="flex flex-wrap gap-2">
               <Link
