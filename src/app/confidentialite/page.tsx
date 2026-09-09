@@ -24,6 +24,18 @@ export default function ConfidentialitePage() {
         Vous pouvez demander la consultation, la modification ou la suppression de vos données en
         nous contactant directement.
       </p>
+
+      <h2 className="mb-2 mt-6 font-bold text-navy">Facturation vendeur</h2>
+      <p className="mb-3">
+        Pour les vendeurs, AchaVite conserve l&apos;historique des paiements d&apos;essai et
+        d&apos;abonnement (montant, période, statut) ainsi que les factures générées, à des fins
+        comptables et pour l&apos;affichage de l&apos;historique dans l&apos;espace vendeur.
+      </p>
+      <p className="mb-3">
+        Comme pour les commandes clients, AchaVite ne demande jamais d&apos;information bancaire :
+        la confirmation d&apos;un paiement d&apos;abonnement se fait manuellement par nos équipes,
+        après réception via les moyens de paiement indiqués dans l&apos;espace vendeur.
+      </p>
     </div>
   );
 }
