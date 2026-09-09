@@ -67,6 +67,12 @@ describe("nextReminderDay", () => {
   });
 });
 
+describe("daysUntil with an unparseable date", () => {
+  it("returns null instead of NaN for a corrupt/invalid date string", () => {
+    expect(daysUntil("not-a-date")).toBeNull();
+  });
+});
+
 describe("computeSubscriptionStatus", () => {
   const now = new Date("2026-01-10T00:00:00Z");
 
@@ -103,6 +109,15 @@ describe("computeSubscriptionStatus", () => {
     for (const status of ["trial_pending", "trial_expired", "pro_expired", "payment_pending", "payment_failed"] as const) {
       expect(computeSubscriptionStatus(baseSubscription({ status }), now)).toBe(status);
     }
+  });
+
+  it("MON-007: an 'active' status with no expiry date at all is treated as expired, not perpetual", () => {
+    expect(computeSubscriptionStatus(baseSubscription({ status: "trial_active", trial_expires_at: null }), now)).toBe("trial_expired");
+    expect(computeSubscriptionStatus(baseSubscription({ status: "pro_active", current_period_end: null }), now)).toBe("pro_expired");
+  });
+
+  it("MON-026: an 'active' status with a corrupt expiry date is treated as expired, not perpetual", () => {
+    expect(computeSubscriptionStatus(baseSubscription({ status: "trial_active", trial_expires_at: "not-a-date" }), now)).toBe("trial_expired");
   });
 });
 

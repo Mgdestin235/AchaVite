@@ -15,10 +15,16 @@ import { computeSubscriptionStatus, hasActiveAccess } from "@/lib/payments/prici
  * the parent (protected)/layout.tsx) rather than a pathname check there,
  * since Next.js layouts don't have direct access to the current path.
  *
- * The actual expiry enforcement lives in the daily reminder cron (which
- * flips subscriptions.status), but computeSubscriptionStatus() is also
- * evaluated live here so access is never wrong just because the cron
- * hasn't run yet today.
+ * The actual expiry enforcement now lives server-side in Postgres RLS
+ * (see supabase/migrations/0005_security_hardening_monetization.sql,
+ * store_has_active_subscription()) and the daily reminder cron, which flips
+ * subscriptions.status. This layout is an ergonomics layer on top of that,
+ * redirecting an expired vendor straight to the payment flow instead of
+ * letting their write actions fail with a raw Postgres error -- it is no
+ * longer the only barrier, so a transient fetch error here fails OPEN
+ * (renders the page) rather than wrongly telling an up-to-date PRO vendor
+ * to pay again (bug-report-monetization.md, MON-003): the database still
+ * refuses any write they aren't actually entitled to.
  */
 export default async function SubscriptionGatedLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
@@ -34,7 +40,12 @@ export default async function SubscriptionGatedLayout({ children }: { children: 
     return <>{children}</>;
   }
 
-  const subscription = await getSubscriptionByStore(supabase, store.id);
+  const { subscription, error } = await getSubscriptionByStore(supabase, store.id);
+  if (error) {
+    console.error("subscription-gated layout: failed to load subscription, failing open (RLS still enforces access)", error);
+    return <>{children}</>;
+  }
+
   const effectiveStatus = computeSubscriptionStatus(subscription);
   if (!hasActiveAccess(effectiveStatus)) {
     redirect("/admin/abonnement");

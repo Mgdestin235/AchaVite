@@ -3,10 +3,13 @@ import { CheckCircle2, Clock, ShieldAlert, XCircle } from "lucide-react";
 import type { SubscriptionPlan, SubscriptionStatus } from "@/lib/db/types";
 import { cn } from "@/lib/cn";
 
+// Labels match the "Mode Free / Mode Pro" branding used on the homepage and
+// in the Super Admin abonnements table -- kept identical in both places so
+// a vendor never sees two different names for the same status.
 const STATUS_META: Record<SubscriptionStatus, { label: string; color: string; icon: typeof CheckCircle2 }> = {
-  trial_pending: { label: "Essai non activé", color: "bg-navy/10 text-navy", icon: Clock },
-  trial_active: { label: "Essai actif", color: "bg-green-100 text-green-700", icon: CheckCircle2 },
-  trial_expired: { label: "Essai expiré", color: "bg-red-100 text-red-600", icon: XCircle },
+  trial_pending: { label: "Free non activé", color: "bg-navy/10 text-navy", icon: Clock },
+  trial_active: { label: "Free actif", color: "bg-green-100 text-green-700", icon: CheckCircle2 },
+  trial_expired: { label: "Free expiré", color: "bg-red-100 text-red-600", icon: XCircle },
   pro_active: { label: "PRO actif", color: "bg-orange-light text-orange-dark", icon: CheckCircle2 },
   pro_expired: { label: "PRO expiré", color: "bg-red-100 text-red-600", icon: XCircle },
   payment_pending: { label: "Paiement en attente", color: "bg-yellow-100 text-yellow-700", icon: Clock },
@@ -117,6 +120,13 @@ export function AbonnementStatusCard({
             Renouveler
           </Link>
         </div>
+      )}
+
+      {status === "payment_pending" && (
+        <p className="rounded-xl bg-yellow-50 p-4 text-sm text-yellow-800">
+          Votre déclaration de paiement est en cours de vérification par notre équipe. Vous serez
+          notifié dès que votre abonnement sera activé.
+        </p>
       )}
 
       {(status === "suspended" || status === "cancelled") && (

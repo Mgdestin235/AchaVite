@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
@@ -6,6 +7,25 @@ import { logAudit } from "@/lib/db/auditLogs";
 import { getActivePlan } from "@/lib/db/subscriptionPlans";
 import { formatFCFA } from "@/lib/format";
 import { buildReminderMessage, decideSubscriptionAction, reminderKindFor } from "@/lib/payments/subscriptionLifecycle";
+
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/** Constant-time comparison so a mistyped/leaked-partial secret can't be brute-forced via response timing. */
+function isValidCronSecret(authHeader: string | null, secret: string): boolean {
+  const expected = `Bearer ${secret}`;
+  const provided = authHeader ?? "";
+  const a = Buffer.from(expected);
+  const b = Buffer.from(provided);
+  if (a.length !== b.length) return false;
+  return crypto.timingSafeEqual(a, b);
+}
 
 /**
  * Daily cron (see vercel.json, 07:00 UTC). Vercel automatically sends
@@ -20,8 +40,7 @@ import { buildReminderMessage, decideSubscriptionAction, reminderKindFor } from 
  */
 export async function GET(request: Request): Promise<NextResponse> {
   const secret = process.env.CRON_SECRET;
-  const authHeader = request.headers.get("authorization");
-  if (!secret || authHeader !== `Bearer ${secret}`) {
+  if (!secret || !isValidCronSecret(request.headers.get("authorization"), secret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
@@ -88,6 +107,17 @@ export async function GET(request: Request): Promise<NextResponse> {
     reminderCount++;
   }
 
+  // A visible heartbeat: if CRON_SECRET is ever misconfigured or removed on
+  // Vercel, this run never happens and the absence of a fresh
+  // "subscription_cron.completed" entry is what tells us something's wrong
+  // (nothing else would -- the route would just silently 401 every day).
+  await logAudit(supabase, {
+    actorId: null,
+    action: "subscription_cron.completed",
+    entityType: "cron",
+    metadata: { checked: subscriptions.length, expired: expiredCount, remindersSent: reminderCount },
+  });
+
   return NextResponse.json({ ok: true, checked: subscriptions.length, expired: expiredCount, remindersSent: reminderCount });
 }
 
@@ -110,8 +140,8 @@ async function sendReminderEmail(
       subject,
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-          <h2 style="color:#0B1F3A;">${subject}</h2>
-          <p>${message}</p>
+          <h2 style="color:#0B1F3A;">${escapeHtml(subject)}</h2>
+          <p>${escapeHtml(message)}</p>
           <p style="color:#888; font-size:12px;">AchaVite — Les meilleures bonnes affaires à portée de main.</p>
         </div>
       `,

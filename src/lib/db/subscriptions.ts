@@ -1,12 +1,20 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Subscription, SubscriptionStatus } from "./types";
 
+/**
+ * `error` is only ever set on a genuine fetch failure (network/PostgREST
+ * error), never for "this store simply has no subscription row yet" --
+ * callers must not treat the two the same way. Confusing them previously
+ * meant a transient error could show a fully-paid PRO vendor a "your trial
+ * isn't activated, pay 5 500 FCFA" screen (bug-report-monetization.md,
+ * MON-003).
+ */
 export async function getSubscriptionByStore(
   supabase: SupabaseClient,
   storeId: string
-): Promise<Subscription | null> {
-  const { data } = await supabase.from("subscriptions").select("*").eq("store_id", storeId).maybeSingle();
-  return (data as Subscription) ?? null;
+): Promise<{ subscription: Subscription | null; error: string | null }> {
+  const { data, error } = await supabase.from("subscriptions").select("*").eq("store_id", storeId).maybeSingle();
+  return { subscription: (data as Subscription) ?? null, error: error?.message ?? null };
 }
 
 export async function listSubscriptions(

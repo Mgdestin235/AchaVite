@@ -83,6 +83,18 @@ export default function AbonnementsPage() {
     });
   }, [subs, filter]);
 
+  // "Réactiver" restores whichever status the store's real dates still
+  // support -- never a bare "trial_active"/"pro_active" with no expiry,
+  // which would grant free, permanent access invisible to the revenue
+  // stats and never re-expirable by the cron (security-report-
+  // monetization.md / bug-report MON-007).
+  function reactivationTarget(sub: Subscription): SubscriptionStatus {
+    const now = Date.now();
+    if (sub.current_period_end && new Date(sub.current_period_end).getTime() > now) return "pro_active";
+    if (sub.trial_expires_at && new Date(sub.trial_expires_at).getTime() > now) return "trial_active";
+    return "trial_pending";
+  }
+
   async function handleSetStatus(sub: Subscription, status: SubscriptionStatus) {
     const { error } = await setSubscriptionStatus(supabase, sub.id, status);
     if (error) {
@@ -164,7 +176,7 @@ export default function AbonnementsPage() {
                         )}
                         {(sub.status === "suspended" || sub.status === "cancelled") && (
                           <button
-                            onClick={() => handleSetStatus(sub, sub.current_period_end ? "pro_active" : "trial_active")}
+                            onClick={() => handleSetStatus(sub, reactivationTarget(sub))}
                             className="rounded-lg bg-green-100 px-2.5 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-200"
                           >
                             Réactiver

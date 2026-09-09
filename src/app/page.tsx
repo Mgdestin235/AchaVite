@@ -112,6 +112,20 @@ export default async function LandingPage() {
           </Link>
         </div>
 
+        <p className="mt-4 text-center text-xs text-gray-400">
+          <Link href="/boutique" className="font-semibold text-navy underline">
+            Parcourir la boutique sans compte
+          </Link>
+          {" · "}
+          <Link href="/connexion" className="font-semibold text-navy underline">
+            Se connecter
+          </Link>
+          {" · "}
+          <Link href="/suivi" className="font-semibold text-navy underline">
+            Suivre une commande
+          </Link>
+        </p>
+
         {/* Pricing: prices/features are always fetched live from subscription_plans, never hardcoded */}
         <div className="mt-10">
           <h2 className="text-xl font-extrabold text-navy">Nos offres vendeurs</h2>

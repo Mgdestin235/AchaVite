@@ -17,13 +17,25 @@ export default async function AbonnementPage() {
   const store = await getStoreByOwner(supabase, user!.id);
   if (!store) redirect("/admin/store");
 
-  const [subscription, payments, invoices, trialPlan, proPlan] = await Promise.all([
+  const [{ subscription, error: subscriptionError }, payments, invoices, trialPlan, proPlan] = await Promise.all([
     getSubscriptionByStore(supabase, store.id),
     listSubscriptionPaymentsForStore(supabase, store.id),
     listInvoicesForStore(supabase, store.id),
     getActivePlan(supabase, "trial"),
     getActivePlan(supabase, "pro_monthly"),
   ]);
+
+  if (subscriptionError) {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <h1 className="mb-1 text-xl font-bold text-navy">Mon abonnement</h1>
+        <p className="rounded-xl bg-red-50 p-4 text-sm text-red-600">
+          Impossible de charger votre abonnement pour le moment. Rafraîchissez la page dans un
+          instant -- si vous étiez déjà à jour, votre accès n&apos;a pas été affecté.
+        </p>
+      </div>
+    );
+  }
 
   const effectiveStatus = computeSubscriptionStatus(subscription);
   const expiryIso = subscription?.status === "pro_active" ? subscription.current_period_end : subscription?.trial_expires_at;
@@ -65,6 +77,12 @@ export default async function AbonnementPage() {
                 failed: "bg-red-100 text-red-600",
                 refunded: "bg-gray-100 text-gray-500",
               };
+              const STATUS_LABELS: Record<string, string> = {
+                pending: "En attente",
+                success: "Payé",
+                failed: "Échoué",
+                refunded: "Remboursé",
+              };
               return (
                 <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-gray-100 p-3 text-sm">
                   <div>
@@ -78,7 +96,7 @@ export default async function AbonnementPage() {
                       {Number(p.amount).toLocaleString("fr-FR")} {p.currency_code}
                     </span>
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${STATUS_COLORS[p.status]}`}>
-                      {p.status}
+                      {STATUS_LABELS[p.status] ?? p.status}
                     </span>
                     {invoice && (
                       <Link

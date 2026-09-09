@@ -59,12 +59,9 @@ describe("decideSubscriptionAction", () => {
     expect(decideSubscriptionAction(sub, now)).toEqual({ type: "remind", milestone: 1 });
   });
 
-  it("vendeur avec paiement échoué: payment_failed is never touched by the cron (not trial_active/pro_active in the first place)", () => {
-    // decideSubscriptionAction is only ever called on trial_active/pro_active rows
-    // (see listActiveSubscriptions) -- a payment_failed subscription simply never
-    // reaches it, which is itself the correct "no action" behavior.
-    const sub = baseSubscription({ status: "payment_failed" });
-    expect(computeSubscriptionStatusIsStable(sub, now)).toBe(true);
+  it("vendeur avec paiement échoué: if decideSubscriptionAction were ever called on a payment_failed row (it shouldn't be -- listActiveSubscriptions only returns trial_active/pro_active), it is a noop, never a reminder or a fabricated expiry", () => {
+    const sub = baseSubscription({ status: "payment_failed", trial_expires_at: null });
+    expect(decideSubscriptionAction(sub, now)).toEqual({ type: "noop" });
   });
 
   it("a renewal made before expiry resumes reminders on the new, later period_end", () => {
@@ -79,18 +76,6 @@ describe("decideSubscriptionAction", () => {
     expect(decideSubscriptionAction(sub, now)).toEqual({ type: "remind", milestone: 30 });
   });
 });
-
-function computeSubscriptionStatusIsStable(sub: Subscription, now: Date): boolean {
-  // payment_failed has no expiry dates to compare against, so it can never
-  // "effectively" differ from itself -- decideSubscriptionAction would be a
-  // noop if ever called on it, which matches the requirement.
-  return sub.status === decideSubscriptionActionStatusOnly(sub, now);
-}
-
-function decideSubscriptionActionStatusOnly(sub: Subscription, now: Date): Subscription["status"] {
-  const action = decideSubscriptionAction(sub, now);
-  return action.type === "expire" ? action.newStatus : sub.status;
-}
 
 describe("reminderKindFor", () => {
   it("is 'trial' for anything except pro_active", () => {
@@ -117,6 +102,22 @@ describe("buildReminderMessage", () => {
     expect(buildReminderMessage("trial", 0, price).message).toBe(
       `Votre période d'essai est terminée. Passez au Mode Pro à ${price} pour réactiver votre boutique.`
     );
+  });
+
+  it("covers the early trial milestones (30/15) not dictated verbatim, distinct per milestone and non-empty", () => {
+    const at30 = buildReminderMessage("trial", 30, price);
+    const at15 = buildReminderMessage("trial", 15, price);
+    expect(at30.message).toContain("30 jours");
+    expect(at15.message).toContain("15 jours");
+    expect(at30.message).not.toBe(at15.message);
+  });
+
+  it("covers every PRO-renewal milestone (30/15/7/3/1/0), each producing a distinct message", () => {
+    const messages = [30, 15, 7, 3, 1, 0].map((m) => buildReminderMessage("pro", m as 30 | 15 | 7 | 3 | 1 | 0, price).message);
+    expect(new Set(messages).size).toBe(messages.length);
+    for (const message of messages) {
+      expect(message.toLowerCase()).toContain("pro");
+    }
   });
 
   it("never hardcodes the PRO price -- it always comes from proPriceLabel", () => {

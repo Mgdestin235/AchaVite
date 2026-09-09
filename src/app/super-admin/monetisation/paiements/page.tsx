@@ -40,7 +40,10 @@ export default function MonetisationPaiementsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
 
-  async function handleConfirm(paymentId: string) {
+  async function handleConfirm(paymentId: string, storeName: string, amountLabel: string) {
+    if (!confirm(`Valider le paiement de ${amountLabel} pour la boutique « ${storeName} » ?\n\nCette action active immédiatement l'abonnement et génère une facture -- elle est irréversible.`)) {
+      return;
+    }
     const { error } = await confirmSubscriptionPayment(supabase, paymentId);
     if (error) {
       toast.error(error);
@@ -86,7 +89,7 @@ export default function MonetisationPaiementsPage() {
                   <td className="px-4 py-3 text-right">
                     {p.status === "pending" ? (
                       <button
-                        onClick={() => handleConfirm(p.id)}
+                        onClick={() => handleConfirm(p.id, p.stores?.name ?? "cette boutique", formatFCFA(Number(p.amount)))}
                         className="flex items-center gap-1 rounded-lg bg-green-100 px-2.5 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-200"
                       >
                         <CheckCircle2 size={14} />
