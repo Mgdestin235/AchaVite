@@ -42,11 +42,12 @@ export async function POST(request: Request): Promise<NextResponse> {
   const timestamp = Math.round(Date.now() / 1000);
   const maxBytes = folder === "products/videos" ? 100 * 1024 * 1024 : 15 * 1024 * 1024;
 
-  const paramsToSign: Record<string, string | number> = { folder, max_bytes: maxBytes, timestamp };
-  const toSign = Object.keys(paramsToSign)
-    .sort()
-    .map((key) => `${key}=${paramsToSign[key]}`)
-    .join("&");
+  // Sign ONLY the params Cloudinary actually verifies. `max_bytes` is NOT a
+  // real Cloudinary upload parameter -- it strips it before computing its
+  // own string-to-sign, so signing it here produced a permanent "Invalid
+  // Signature" mismatch. The size cap is enforced client-side instead (see
+  // uploadClient.ts); `maxBytes` is still returned for that check.
+  const toSign = `folder=${folder}&timestamp=${timestamp}`;
   const signature = crypto
     .createHash("sha1")
     .update(toSign + apiSecret)

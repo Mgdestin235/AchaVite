@@ -44,13 +44,22 @@ export async function uploadFile(file: File, kind: UploadKind): Promise<string> 
     throw new Error(sigData.error || "Échec de préparation du téléversement");
   }
 
+  // Size cap is enforced here, not via a signed Cloudinary param (there is
+  // no real one for a per-request byte limit -- see api/upload/route.ts).
+  if (file.size > sigData.maxBytes) {
+    const mb = Math.round(sigData.maxBytes / (1024 * 1024));
+    throw new Error(`Fichier trop volumineux (${mb} Mo maximum).`);
+  }
+
+  // Only folder + timestamp are signed, so only they (plus the file,
+  // api_key and signature) may be sent -- any extra field would break
+  // Cloudinary's signature check.
   const formData = new FormData();
   formData.append("file", file);
   formData.append("api_key", sigData.apiKey);
   formData.append("timestamp", String(sigData.timestamp));
   formData.append("signature", sigData.signature);
   formData.append("folder", sigData.folder);
-  formData.append("max_bytes", String(sigData.maxBytes));
 
   const uploadRes = await fetch(
     `https://api.cloudinary.com/v1_1/${sigData.cloudName}/${RESOURCE_TYPE[kind]}/upload`,
