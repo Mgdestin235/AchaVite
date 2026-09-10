@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Check, X, Ban, RotateCcw, Store as StoreIcon } from "lucide-react";
-import { toast } from "sonner";
+import Link from "next/link";
+import { ChevronRight, Store as StoreIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import type { Store, StoreStatus } from "@/lib/db/types";
 import { cn } from "@/lib/cn";
@@ -23,12 +23,18 @@ const STATUS_BADGE: Record<StoreStatus, string> = {
   suspended: "bg-gray-100 text-gray-500",
 };
 
+const STATUS_LABEL: Record<StoreStatus, string> = {
+  pending: "En attente",
+  approved: "Approuvée",
+  rejected: "Refusée",
+  suspended: "Suspendue",
+};
+
 export default function SuperAdminStoresPage() {
   const supabase = createClient();
   const [stores, setStores] = useState<Store[]>([]);
   const [filter, setFilter] = useState<StoreStatus | "">("");
   const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -43,42 +49,15 @@ export default function SuperAdminStoresPage() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter, refreshKey]);
-
-  async function setStatus(store: Store, status: StoreStatus) {
-    const { error } = await supabase
-      .from("stores")
-      .update({ status, rejection_reason: status === "rejected" ? store.rejection_reason : null })
-      .eq("id", store.id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success(`Boutique « ${store.name} » : statut mis à jour`);
-    setRefreshKey((k) => k + 1);
-  }
-
-  async function handleReject(store: Store) {
-    const reason = window.prompt(
-      `Motif du refus de « ${store.name} » (visible par le vendeur) :`,
-      store.rejection_reason ?? ""
-    );
-    if (reason === null) return; // cancelled
-    const { error } = await supabase
-      .from("stores")
-      .update({ status: "rejected", rejection_reason: reason.trim() || null })
-      .eq("id", store.id);
-    if (error) {
-      toast.error(error.message);
-      return;
-    }
-    toast.success(`Boutique « ${store.name} » refusée`);
-    setRefreshKey((k) => k + 1);
-  }
+  }, [filter]);
 
   return (
     <div>
-      <h1 className="mb-5 text-xl font-bold text-navy">Boutiques</h1>
+      <h1 className="mb-1 text-xl font-bold text-navy">Boutiques</h1>
+      <p className="mb-5 text-sm text-gray-500">
+        Ouvrez le dossier d&apos;une boutique pour consulter les informations du vendeur et ses
+        documents avant de la valider.
+      </p>
 
       <div className="mb-4 flex flex-wrap gap-2">
         {STATUS_FILTERS.map((f) => (
@@ -102,7 +81,11 @@ export default function SuperAdminStoresPage() {
       ) : (
         <div className="space-y-2">
           {stores.map((store) => (
-            <div key={store.id} className="flex flex-col gap-3 rounded-xl bg-white p-4 ring-1 ring-black/5 sm:flex-row sm:items-center">
+            <Link
+              key={store.id}
+              href={`/super-admin/stores/${store.id}`}
+              className="flex items-center gap-3 rounded-xl bg-white p-4 ring-1 ring-black/5 transition-colors hover:bg-gray-50"
+            >
               <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                 {store.logo_url ? (
                   <Image src={store.logo_url} alt={store.name} fill className="object-cover" />
@@ -115,48 +98,12 @@ export default function SuperAdminStoresPage() {
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold text-navy">{store.name}</p>
                 <p className="truncate text-xs text-gray-400">{store.city || "Ville non renseignée"}</p>
-                {store.status === "rejected" && store.rejection_reason && (
-                  <p className="mt-1 truncate text-xs text-red-500">Motif : {store.rejection_reason}</p>
-                )}
               </div>
               <span className={cn("w-fit rounded-full px-2.5 py-0.5 text-xs font-semibold", STATUS_BADGE[store.status])}>
-                {store.status}
+                {STATUS_LABEL[store.status]}
               </span>
-              <div className="flex shrink-0 gap-2">
-                {store.status !== "approved" && (
-                  <button
-                    onClick={() => setStatus(store, "approved")}
-                    className="flex items-center gap-1 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100"
-                  >
-                    <Check size={14} /> Approuver
-                  </button>
-                )}
-                {store.status === "pending" && (
-                  <button
-                    onClick={() => handleReject(store)}
-                    className="flex items-center gap-1 rounded-lg bg-red-50 px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-100"
-                  >
-                    <X size={14} /> Refuser
-                  </button>
-                )}
-                {store.status === "approved" && (
-                  <button
-                    onClick={() => setStatus(store, "suspended")}
-                    className="flex items-center gap-1 rounded-lg bg-gray-100 px-3 py-1.5 text-xs font-semibold text-gray-600 hover:bg-gray-200"
-                  >
-                    <Ban size={14} /> Suspendre
-                  </button>
-                )}
-                {store.status === "suspended" && (
-                  <button
-                    onClick={() => setStatus(store, "approved")}
-                    className="flex items-center gap-1 rounded-lg bg-green-50 px-3 py-1.5 text-xs font-semibold text-green-700 hover:bg-green-100"
-                  >
-                    <RotateCcw size={14} /> Réactiver
-                  </button>
-                )}
-              </div>
-            </div>
+              <ChevronRight size={18} className="shrink-0 text-gray-300" />
+            </Link>
           ))}
         </div>
       )}

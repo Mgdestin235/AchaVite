@@ -2,7 +2,13 @@ import crypto from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
-const ALLOWED_FOLDERS = ["products/images", "products/videos", "products/pdf", "products/ebooks"] as const;
+const ALLOWED_FOLDERS = [
+  "products/images",
+  "products/videos",
+  "products/pdf",
+  "products/ebooks",
+  "stores/documents",
+] as const;
 
 // Issues a short-lived signature so the browser can upload a file directly
 // to Cloudinary (bypassing this server entirely for the file bytes, which

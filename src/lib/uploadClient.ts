@@ -1,10 +1,11 @@
-export type UploadKind = "image" | "video" | "pdf" | "ebook";
+export type UploadKind = "image" | "video" | "pdf" | "ebook" | "document";
 
 const FOLDER: Record<UploadKind, string> = {
   image: "products/images",
   video: "products/videos",
   pdf: "products/pdf",
   ebook: "products/ebooks",
+  document: "stores/documents",
 };
 
 const RESOURCE_TYPE: Record<UploadKind, string> = {
@@ -12,6 +13,8 @@ const RESOURCE_TYPE: Record<UploadKind, string> = {
   video: "video",
   pdf: "raw",
   ebook: "raw",
+  // Application papers can be a PDF or a photo -- let Cloudinary detect.
+  document: "auto",
 };
 
 type SignatureResponse = {

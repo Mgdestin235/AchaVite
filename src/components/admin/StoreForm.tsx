@@ -1,14 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Loader2, Store as StoreIcon, ImagePlus } from "lucide-react";
+import { Loader2, Store as StoreIcon, ImagePlus, FileText, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { uploadFile } from "@/lib/uploadClient";
 import { slugify } from "@/lib/format";
-import type { Store } from "@/lib/db/types";
+import { addStoreDocument, deleteStoreDocument, listStoreDocuments } from "@/lib/db/storeDocuments";
+import type { Store, StoreDocument } from "@/lib/db/types";
 import { cn } from "@/lib/cn";
 
 const STATUS_LABELS: Record<Store["status"], { label: string; className: string }> = {
@@ -262,6 +263,8 @@ export function StoreForm({
         </div>
       </div>
 
+      <StoreDocumentsSection store={store} />
+
       <button
         disabled={saving}
         className="w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark disabled:opacity-50"
@@ -269,5 +272,126 @@ export function StoreForm({
         {saving ? "Enregistrement..." : store ? "Mettre à jour la boutique" : "Créer ma boutique"}
       </button>
     </form>
+  );
+}
+
+const DOC_TYPES = [
+  "Pièce d'identité",
+  "Registre de commerce",
+  "Numéro fiscal / NIF",
+  "Justificatif de domicile",
+  "Autre document",
+];
+
+function StoreDocumentsSection({ store }: { store: Store | null }) {
+  const supabase = createClient();
+  const [docs, setDocs] = useState<StoreDocument[]>([]);
+  const [label, setLabel] = useState(DOC_TYPES[0]);
+  const [uploading, setUploading] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    if (!store) return;
+    let cancelled = false;
+    listStoreDocuments(supabase, store.id).then((d) => {
+      if (!cancelled) setDocs(d);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [store?.id, refreshKey]);
+
+  async function handleUpload(file: File) {
+    if (!store) return;
+    setUploading(true);
+    try {
+      const url = await uploadFile(file, "document");
+      const { error } = await addStoreDocument(supabase, store.id, label, url);
+      if (error) throw new Error(error);
+      toast.success("Document ajouté");
+      setRefreshKey((k) => k + 1);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Échec du téléversement");
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function handleDelete(doc: StoreDocument) {
+    if (!confirm(`Supprimer « ${doc.label} » ?`)) return;
+    const { error } = await deleteStoreDocument(supabase, doc.id);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    setRefreshKey((k) => k + 1);
+  }
+
+  return (
+    <div className="rounded-xl bg-white p-4 ring-1 ring-black/5 sm:p-5">
+      <p className="mb-1 text-xs font-semibold uppercase text-gray-400">Documents justificatifs</p>
+      <p className="mb-3 text-xs text-gray-500">
+        Joignez les pièces demandées pour la validation de votre boutique par l&apos;équipe AchaVite
+        (pièce d&apos;identité, registre de commerce...). PDF ou photo, 15 Mo maximum.
+      </p>
+
+      {!store ? (
+        <p className="rounded-lg bg-gray-50 px-3 py-2.5 text-xs text-gray-500">
+          Créez d&apos;abord votre boutique : vous pourrez ensuite ajouter vos documents ici.
+        </p>
+      ) : (
+        <>
+          {docs.length > 0 && (
+            <div className="mb-3 space-y-2">
+              {docs.map((doc) => (
+                <div key={doc.id} className="flex items-center gap-2 rounded-lg border border-gray-100 p-2.5 text-sm">
+                  <FileText size={15} className="shrink-0 text-navy" />
+                  <a
+                    href={doc.file_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="min-w-0 flex-1 truncate font-medium text-navy hover:underline"
+                  >
+                    {doc.label}
+                  </a>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(doc)}
+                    className="shrink-0 rounded-lg p-1.5 text-red-500 hover:bg-red-50"
+                    aria-label="Supprimer le document"
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              className="rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+            >
+              {DOC_TYPES.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+            <label className="flex cursor-pointer items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2.5 text-xs font-medium text-navy hover:border-orange">
+              {uploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+              {uploading ? "Envoi..." : "Ajouter un document"}
+              <input
+                type="file"
+                accept="image/*,application/pdf"
+                className="hidden"
+                disabled={uploading}
+                onChange={(e) => e.target.files?.[0] && handleUpload(e.target.files[0])}
+              />
+            </label>
+          </div>
+        </>
+      )}
+    </div>
   );
 }

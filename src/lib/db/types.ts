@@ -319,6 +319,15 @@ export type Invoice = {
   created_at: string;
 };
 
+/** Mirrors migration 0007 -- vendor application papers reviewed by the Super Admin. */
+export type StoreDocument = {
+  id: string;
+  store_id: string;
+  label: string;
+  file_url: string;
+  created_at: string;
+};
+
 export type StorePaymentMethod = {
   id: string;
   store_id: string;
