@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { MfaEnroll } from "@/components/admin/MfaEnroll";
 import { resolveRoleRedirect } from "@/lib/db/redirectForRole";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +13,7 @@ export default function AdminLoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const [step, setStep] = useState<"password" | "otp" | "mfa-setup">("password");
+  const [step, setStep] = useState<"password" | "otp">("password");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [code, setCode] = useState("");
@@ -47,16 +46,17 @@ export default function AdminLoginPage() {
       }
 
       const { data: aal } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      // Only a *verified* 2FA factor bumps nextLevel to "aal2". If the
+      // account has one, require the OTP step; otherwise log straight in.
+      // We deliberately do NOT force 2FA enrolment at login -- it stays
+      // opt-in from Paramètres (the owner asked to be able to use the app
+      // without 2FA for now). Forcing the setup screen here meant every
+      // single login dead-ended on a QR code instead of signing in.
       if (aal?.nextLevel === "aal2" && aal.currentLevel !== "aal2") {
         setStep("otp");
         return;
       }
-      if (aal?.nextLevel === "aal2" && aal.currentLevel === "aal2") {
-        await redirectAfterAuth();
-        return;
-      }
-      // No MFA factor enrolled yet (shouldn't normally happen): enforce it now.
-      setStep("mfa-setup");
+      await redirectAfterAuth();
     } finally {
       setLoading(false);
     }
@@ -84,14 +84,6 @@ export default function AdminLoginPage() {
     } finally {
       setLoading(false);
     }
-  }
-
-  if (step === "mfa-setup") {
-    return (
-      <div className="flex min-h-[70vh] items-center justify-center px-4">
-        <MfaEnroll onDone={redirectAfterAuth} />
-      </div>
-    );
   }
 
   if (step === "otp") {
