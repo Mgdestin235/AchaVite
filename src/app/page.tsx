@@ -6,17 +6,11 @@ import {
   Store,
   ArrowRight,
   ShieldCheck,
-  Check,
   User,
   FileText,
   Truck,
   Sparkles,
-  Calendar,
-  Crown,
 } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
-import { getActivePlan } from "@/lib/db/subscriptionPlans";
-import { formatFCFA } from "@/lib/format";
 
 const STEPS = [
   { number: 1, icon: ShoppingCart, tint: "bg-blue-50 text-blue-600", badge: "bg-blue-600", title: "Acheter", text: "Trouvez et commandez vos produits" },
@@ -24,13 +18,7 @@ const STEPS = [
   { number: 3, icon: Truck, tint: "bg-blue-50 text-blue-600", badge: "bg-blue-600", title: "Suivre", text: "Suivez vos commandes en temps réel" },
 ] as const;
 
-export default async function LandingPage() {
-  const supabase = await createClient();
-  const [trialPlan, proPlan] = await Promise.all([
-    getActivePlan(supabase, "trial"),
-    getActivePlan(supabase, "pro_monthly"),
-  ]);
-
+export default function LandingPage() {
   return (
     <div className="bg-white">
       {/* Header */}
@@ -120,7 +108,7 @@ export default async function LandingPage() {
           </Link>
 
           <Link
-            href="/admin/inscription"
+            href="/vendeur/offres"
             className="group flex flex-col gap-4 rounded-2xl p-4 text-white shadow-lg transition-transform hover:-translate-y-0.5"
             style={{ background: "linear-gradient(135deg, #3b82f6, #1d4ed8)" }}
           >
@@ -137,117 +125,6 @@ export default async function LandingPage() {
               <p className="mt-1 text-xs text-white/85">Développez votre activité en Afrique</p>
             </div>
           </Link>
-        </div>
-
-        <p className="mt-4 text-center text-xs text-gray-400">
-          <Link href="/boutique" className="font-semibold text-navy underline">
-            Parcourir la boutique sans compte
-          </Link>
-          {" · "}
-          <Link href="/connexion" className="font-semibold text-navy underline">
-            Se connecter
-          </Link>
-          {" · "}
-          <Link href="/suivi" className="font-semibold text-navy underline">
-            Suivre une commande
-          </Link>
-        </p>
-
-        {/* Pricing: prices/features are always fetched live from subscription_plans, never hardcoded */}
-        <div className="mt-10">
-          <div className="flex items-end justify-between">
-            <div>
-              <h2 className="text-xl font-extrabold text-navy">Nos offres vendeurs</h2>
-              <span className="mt-1.5 block h-1 w-10 rounded-full bg-orange" />
-            </div>
-            <Link href="/admin/inscription" className="text-xs font-semibold text-blue-600">
-              En savoir plus →
-            </Link>
-          </div>
-
-          <div className="mt-5 grid grid-cols-2 gap-3">
-            <div className="flex flex-col rounded-2xl bg-blue-50 p-4 ring-1 ring-black/5">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="w-fit rounded-full bg-blue-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-700">
-                  Mode Free
-                </span>
-                <span className="flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-blue-700 ring-1 ring-blue-100">
-                  <Calendar size={11} />
-                  {trialPlan ? Math.round(trialPlan.duration_days / 30) : 3} mois
-                </span>
-              </div>
-              <p className="text-xl font-extrabold text-navy sm:text-2xl">
-                {trialPlan ? formatFCFA(Number(trialPlan.price)) : "—"}
-              </p>
-              <p className="mb-3 text-xs text-gray-500">
-                Testez AchaVite pendant {trialPlan ? Math.round(trialPlan.duration_days / 30) : 3} mois
-              </p>
-              <ul className="mb-4 flex-1 space-y-1.5 text-xs text-gray-600">
-                {(trialPlan?.features?.length
-                  ? trialPlan.features
-                  : [
-                      "Boutique en ligne",
-                      "Ajout de produits illimité",
-                      "Réception de commandes",
-                      "Découverte de la plateforme",
-                      "Support standard",
-                    ]
-                ).map((f) => (
-                  <li key={f} className="flex items-start gap-1.5">
-                    <Check size={14} className="mt-0.5 shrink-0 text-green-600" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/admin/inscription"
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-navy px-3 py-2.5 text-xs font-bold text-white hover:bg-navy-light"
-              >
-                Commencer mes {trialPlan ? Math.round(trialPlan.duration_days / 30) : 3} mois d&apos;essai
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-
-            <div className="flex flex-col rounded-2xl bg-orange-light p-4 ring-2 ring-orange">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="w-fit rounded-full bg-white px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-orange-dark">
-                  Mode Pro
-                </span>
-                <span className="flex items-center gap-1 rounded-full bg-white px-2 py-1 text-[10px] font-bold text-orange-dark ring-1 ring-orange/20">
-                  <Crown size={11} />
-                  Pro
-                </span>
-              </div>
-              <p className="text-xl font-extrabold text-navy sm:text-2xl">
-                {proPlan ? `${formatFCFA(Number(proPlan.price))} / mois` : "—"}
-              </p>
-              <p className="mb-3 text-xs text-gray-500">Passez à la version professionnelle</p>
-              <ul className="mb-4 flex-1 space-y-1.5 text-xs text-gray-600">
-                {(proPlan?.features?.length
-                  ? proPlan.features
-                  : [
-                      "Toutes les fonctionnalités du Mode Free",
-                      "Mise en avant de votre boutique",
-                      "Statistiques avancées",
-                      "Outils pour booster vos ventes",
-                      "Support prioritaire",
-                    ]
-                ).map((f) => (
-                  <li key={f} className="flex items-start gap-1.5">
-                    <Check size={14} className="mt-0.5 shrink-0 text-green-600" />
-                    {f}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/admin/inscription"
-                className="flex items-center justify-center gap-1.5 rounded-xl bg-orange px-3 py-2.5 text-xs font-bold text-white hover:bg-orange-dark"
-              >
-                Passer au Mode Pro
-                <ArrowRight size={14} />
-              </Link>
-            </div>
-          </div>
         </div>
 
         {/* Comment ça marche */}

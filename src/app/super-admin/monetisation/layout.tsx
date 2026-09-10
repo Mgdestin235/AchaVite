@@ -6,6 +6,7 @@ import { cn } from "@/lib/cn";
 
 const TABS = [
   { href: "/super-admin/monetisation/revenus", label: "Revenus" },
+  { href: "/super-admin/monetisation/candidatures", label: "Candidatures vendeur" },
   { href: "/super-admin/monetisation/plans", label: "Plans" },
   { href: "/super-admin/monetisation/abonnements", label: "Abonnements" },
   { href: "/super-admin/monetisation/paiements", label: "Paiements" },

@@ -11,8 +11,10 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   // The landing page ("/") is its own full-screen acheteur/vendeur chooser
   // with its own minimal nav — the storefront chrome would be redundant.
   const isLanding = pathname === "/";
+  // The paid vendor onboarding tunnel is a focused flow, no storefront nav.
+  const isVendorTunnel = pathname.startsWith("/vendeur");
 
-  if (isAdmin || isLanding) {
+  if (isAdmin || isLanding || isVendorTunnel) {
     return <main className="flex-1">{children}</main>;
   }
 

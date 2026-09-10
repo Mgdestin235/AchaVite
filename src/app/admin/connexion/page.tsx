@@ -156,7 +156,7 @@ export default function AdminLoginPage() {
         </p>
         <p className="mt-3 text-center text-sm text-gray-500">
           Pas encore de compte ?{" "}
-          <Link href="/admin/inscription" className="font-semibold text-orange">
+          <Link href="/vendeur/offres" className="font-semibold text-orange">
             Devenir vendeur
           </Link>
         </p>

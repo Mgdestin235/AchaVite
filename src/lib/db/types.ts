@@ -319,6 +319,25 @@ export type Invoice = {
   created_at: string;
 };
 
+/** Mirrors migration 0008 -- paid vendor onboarding before any account exists. */
+export type VendorApplicationStatus = "pending" | "confirmed" | "consumed" | "rejected";
+export type VendorApplication = {
+  id: string;
+  email: string;
+  phone: string | null;
+  plan_code: string;
+  amount: number;
+  currency_code: string;
+  reference: string | null;
+  status: VendorApplicationStatus;
+  access_code: string | null;
+  confirmed_by: string | null;
+  confirmed_at: string | null;
+  store_id: string | null;
+  consumed_at: string | null;
+  created_at: string;
+};
+
 /** Mirrors migration 0007 -- vendor application papers reviewed by the Super Admin. */
 export type StoreDocument = {
   id: string;
