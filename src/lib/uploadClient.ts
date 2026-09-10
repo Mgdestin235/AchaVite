@@ -13,8 +13,11 @@ const RESOURCE_TYPE: Record<UploadKind, string> = {
   video: "video",
   pdf: "raw",
   ebook: "raw",
-  // Application papers can be a PDF or a photo -- let Cloudinary detect.
-  document: "auto",
+  // Justificatifs are stored as "raw" (served as-is on download), never
+  // through the image pipeline. A PDF delivered via /image/upload/ hits
+  // Cloudinary's "PDF & ZIP delivery" restriction and 401s; /raw/upload/
+  // is not subject to it. Works for a photo justificatif too.
+  document: "raw",
 };
 
 type SignatureResponse = {
