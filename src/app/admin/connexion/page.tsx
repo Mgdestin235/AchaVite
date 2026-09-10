@@ -149,7 +149,12 @@ export default function AdminLoginPage() {
         >
           {loading ? "Connexion..." : "Se connecter"}
         </button>
-        <p className="mt-4 text-center text-sm text-gray-500">
+        <p className="mt-3 text-center text-sm">
+          <Link href="/mot-de-passe-oublie?portal=admin" className="font-semibold text-navy">
+            Mot de passe oublié ?
+          </Link>
+        </p>
+        <p className="mt-3 text-center text-sm text-gray-500">
           Pas encore de compte ?{" "}
           <Link href="/admin/inscription" className="font-semibold text-orange">
             Devenir vendeur
