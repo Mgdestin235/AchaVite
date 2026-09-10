@@ -57,7 +57,7 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   if (!application) {
     return NextResponse.json(
-      { error: "Le paiement n'a pas été confirmé. Aucun compte vendeur n'a été créé. Vérifiez votre code ou réessayez." },
+      { error: "Le paiement n'a pas été confirmé. Aucun compte vendeur n'a été créé. Vous pouvez réessayer." },
       { status: 403 }
     );
   }
