@@ -126,7 +126,7 @@ export default async function StoreDossierPage({ params }: { params: Promise<{ i
             {documents.map((doc) => (
               <a
                 key={doc.id}
-                href={doc.file_url}
+                href={`/api/documents?id=${doc.id}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2.5 rounded-lg border border-gray-100 p-2.5 text-sm hover:bg-gray-50"

@@ -306,8 +306,16 @@ function StoreDocumentsSection({ store }: { store: Store | null }) {
     if (!store) return;
     setUploading(true);
     try {
-      const url = await uploadFile(file, "document");
-      const { error } = await addStoreDocument(supabase, store.id, label, url);
+      // Justificatifs go to a private Supabase Storage bucket via our own
+      // route -- NOT Cloudinary, whose PDF delivery block is an account
+      // setting no code can override.
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("storeId", store.id);
+      const res = await fetch("/api/documents/upload", { method: "POST", body: fd });
+      const data = (await res.json()) as { path?: string; error?: string };
+      if (!res.ok || !data.path) throw new Error(data.error || "Échec du téléversement");
+      const { error } = await addStoreDocument(supabase, store.id, label, data.path);
       if (error) throw new Error(error);
       toast.success("Document ajouté");
       setRefreshKey((k) => k + 1);
@@ -348,7 +356,7 @@ function StoreDocumentsSection({ store }: { store: Store | null }) {
                 <div key={doc.id} className="flex items-center gap-2 rounded-lg border border-gray-100 p-2.5 text-sm">
                   <FileText size={15} className="shrink-0 text-navy" />
                   <a
-                    href={doc.file_url}
+                    href={`/api/documents?id=${doc.id}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="min-w-0 flex-1 truncate font-medium text-navy hover:underline"
