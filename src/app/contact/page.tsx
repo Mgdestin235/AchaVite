@@ -2,15 +2,36 @@
 
 import { useState } from "react";
 import { Phone, Mail, MapPin } from "lucide-react";
-import { toast } from "sonner";
+import { CONTACT_EMAIL } from "@/lib/email";
 
 export default function ContactPage() {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [message, setMessage] = useState("");
+  const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setSent(true);
-    toast.success("Message envoyé ! Notre équipe vous répondra rapidement.");
+    setError("");
+    setSending(true);
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, phone, message }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setError(data.error || "Échec de l'envoi. Réessayez.");
+        return;
+      }
+      setSent(true);
+    } finally {
+      setSending(false);
+    }
   }
 
   return (
@@ -27,7 +48,7 @@ export default function ContactPage() {
         </div>
         <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-4 text-center ring-1 ring-black/5">
           <Mail className="text-orange" size={20} />
-          <span className="text-xs font-semibold text-navy">contact@achavite.td</span>
+          <span className="break-all text-xs font-semibold text-navy">{CONTACT_EMAIL}</span>
         </div>
         <div className="flex flex-col items-center gap-2 rounded-xl bg-white p-4 text-center ring-1 ring-black/5">
           <MapPin className="text-orange" size={20} />
@@ -42,24 +63,41 @@ export default function ContactPage() {
       ) : (
         <form onSubmit={handleSubmit} className="space-y-3">
           <input
+            value={name}
+            onChange={(e) => setName(e.target.value)}
             required
             placeholder="Votre nom"
             className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
           />
           <input
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            type="email"
+            placeholder="Votre e-mail (optionnel, pour vous répondre)"
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
+          />
+          <input
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
             required
             type="tel"
             placeholder="Votre téléphone"
             className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
           />
           <textarea
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
             required
             rows={4}
             placeholder="Votre message"
             className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
           />
-          <button className="w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark">
-            Envoyer le message
+          {error && <p className="text-xs font-medium text-red-500">{error}</p>}
+          <button
+            disabled={sending}
+            className="w-full rounded-xl bg-orange py-3 text-sm font-bold text-white hover:bg-orange-dark disabled:opacity-50"
+          >
+            {sending ? "Envoi..." : "Envoyer le message"}
           </button>
         </form>
       )}

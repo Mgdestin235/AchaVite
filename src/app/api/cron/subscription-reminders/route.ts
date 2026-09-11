@@ -7,6 +7,7 @@ import { logAudit } from "@/lib/db/auditLogs";
 import { getActivePlan } from "@/lib/db/subscriptionPlans";
 import { formatFCFA } from "@/lib/format";
 import { buildReminderMessage, decideSubscriptionAction, reminderKindFor } from "@/lib/payments/subscriptionLifecycle";
+import { CONTACT_EMAIL, EMAIL_SENDER } from "@/lib/email";
 
 function escapeHtml(value: string): string {
   return value
@@ -135,8 +136,9 @@ async function sendReminderEmail(
     const email = data?.user?.email;
     if (!email) return;
     await resend.emails.send({
-      from: "AchaVite <onboarding@resend.dev>",
+      from: EMAIL_SENDER,
       to: email,
+      replyTo: CONTACT_EMAIL,
       subject,
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">

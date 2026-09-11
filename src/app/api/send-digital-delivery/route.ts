@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { CONTACT_EMAIL, EMAIL_SENDER } from "@/lib/email";
 
 type DeliveryFile = { name: string; url: string };
 
@@ -76,8 +77,9 @@ export async function POST(request: Request): Promise<NextResponse> {
 
   try {
     const { error } = await resend.emails.send({
-      from: "AchaVite <onboarding@resend.dev>",
+      from: EMAIL_SENDER,
       to: email,
+      replyTo: CONTACT_EMAIL,
       subject: `Votre commande ${safeOrderCode} — téléchargement disponible`,
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
