@@ -1,7 +1,6 @@
-import { Resend } from "resend";
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { CONTACT_EMAIL, EMAIL_SENDER } from "@/lib/email";
+import { sendMail } from "@/lib/mailer";
 
 type DeliveryFile = { name: string; url: string };
 
@@ -40,14 +39,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Non autorisé." }, { status: 403 });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
-    return NextResponse.json(
-      { error: "Le service d'envoi d'email n'est pas configuré (RESEND_API_KEY manquant)." },
-      { status: 503 }
-    );
-  }
-
   const body = (await request.json()) as RequestBody;
   const { email, orderCode, customerName, files } = body;
 
@@ -66,7 +57,6 @@ export async function POST(request: Request): Promise<NextResponse> {
     }
   }
 
-  const resend = new Resend(apiKey);
   const safeCustomerName = escapeHtml(customerName || "");
   const safeOrderCode = escapeHtml(orderCode || "");
   const firstName = safeCustomerName.split(" ")[0] || safeCustomerName;
@@ -75,27 +65,27 @@ export async function POST(request: Request): Promise<NextResponse> {
     .map((f) => `<li><a href="${f.url}" style="color:#FF7A1A;">${escapeHtml(f.name)}</a></li>`)
     .join("");
 
-  try {
-    const { error } = await resend.emails.send({
-      from: EMAIL_SENDER,
-      to: email,
-      replyTo: CONTACT_EMAIL,
-      subject: `Votre commande ${safeOrderCode} — téléchargement disponible`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-          <h2 style="color:#0B1F3A;">Merci ${firstName} 🎉</h2>
-          <p>Votre commande <strong>${safeOrderCode}</strong> est confirmée. Voici vos fichiers :</p>
-          <ul>${linksHtml}</ul>
-          <p style="color:#888; font-size:12px;">AchaVite — Les meilleures bonnes affaires à portée de main.</p>
-        </div>
-      `,
-    });
+  const { error } = await sendMail({
+    to: email,
+    subject: `Votre commande ${safeOrderCode} — téléchargement disponible`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2 style="color:#0B1F3A;">Merci ${firstName} 🎉</h2>
+        <p>Votre commande <strong>${safeOrderCode}</strong> est confirmée. Voici vos fichiers :</p>
+        <ul>${linksHtml}</ul>
+        <p style="color:#888; font-size:12px;">AchaVite — Les meilleures bonnes affaires à portée de main.</p>
+      </div>
+    `,
+  });
 
-    if (error) {
-      return NextResponse.json({ error: "Échec de l'envoi de l'email." }, { status: 502 });
-    }
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Échec de l'envoi de l'email." }, { status: 500 });
+  if (error === "not_configured") {
+    return NextResponse.json(
+      { error: "Le service d'envoi d'email n'est pas encore configuré." },
+      { status: 503 }
+    );
   }
+  if (error) {
+    return NextResponse.json({ error: "Échec de l'envoi de l'email." }, { status: 502 });
+  }
+  return NextResponse.json({ ok: true });
 }

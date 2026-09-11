@@ -1,13 +1,12 @@
 import crypto from "node:crypto";
 import { NextResponse } from "next/server";
-import { Resend } from "resend";
 import { createAdminClient } from "@/lib/supabase/server";
 import { listActiveSubscriptions, setSubscriptionStatus } from "@/lib/db/subscriptions";
 import { logAudit } from "@/lib/db/auditLogs";
 import { getActivePlan } from "@/lib/db/subscriptionPlans";
 import { formatFCFA } from "@/lib/format";
 import { buildReminderMessage, decideSubscriptionAction, reminderKindFor } from "@/lib/payments/subscriptionLifecycle";
-import { CONTACT_EMAIL, EMAIL_SENDER } from "@/lib/email";
+import { sendMail } from "@/lib/mailer";
 
 function escapeHtml(value: string): string {
   return value
@@ -47,8 +46,6 @@ export async function GET(request: Request): Promise<NextResponse> {
 
   const supabase = createAdminClient();
   const subscriptions = await listActiveSubscriptions(supabase);
-  const resendKey = process.env.RESEND_API_KEY;
-  const resend = resendKey ? new Resend(resendKey) : null;
 
   // The PRO price is always read live from subscription_plans, never
   // hardcoded in a reminder message -- same rule as the pricing cards.
@@ -90,7 +87,7 @@ export async function GET(request: Request): Promise<NextResponse> {
         kind: "subscription_expired",
         metadata: { subscription_id: sub.id },
       });
-      await sendReminderEmail(resend, supabase, store.owner_id, title, message);
+      await sendReminderEmail(supabase, store.owner_id, title, message);
       continue;
     }
 
@@ -103,7 +100,7 @@ export async function GET(request: Request): Promise<NextResponse> {
       kind: "subscription_reminder",
       metadata: { subscription_id: sub.id, days_remaining: action.milestone },
     });
-    await sendReminderEmail(resend, supabase, store.owner_id, title, message);
+    await sendReminderEmail(supabase, store.owner_id, title, message);
     await supabase.from("subscriptions").update({ last_reminder_sent_days: action.milestone }).eq("id", sub.id);
     reminderCount++;
   }
@@ -122,23 +119,19 @@ export async function GET(request: Request): Promise<NextResponse> {
   return NextResponse.json({ ok: true, checked: subscriptions.length, expired: expiredCount, remindersSent: reminderCount });
 }
 
-/** Best-effort: email delivery never fails the cron run, and silently no-ops if RESEND_API_KEY isn't set. */
+/** Best-effort: email delivery never fails the cron run, and silently no-ops if Gmail sending isn't configured. */
 async function sendReminderEmail(
-  resend: Resend | null,
   adminSupabase: ReturnType<typeof createAdminClient>,
   ownerId: string,
   subject: string,
   message: string
 ): Promise<void> {
-  if (!resend) return;
   try {
     const { data } = await adminSupabase.auth.admin.getUserById(ownerId);
     const email = data?.user?.email;
     if (!email) return;
-    await resend.emails.send({
-      from: EMAIL_SENDER,
+    await sendMail({
       to: email,
-      replyTo: CONTACT_EMAIL,
       subject,
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">

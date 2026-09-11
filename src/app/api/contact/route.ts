@@ -1,6 +1,6 @@
-import { Resend } from "resend";
 import { NextResponse } from "next/server";
-import { CONTACT_EMAIL, EMAIL_SENDER } from "@/lib/email";
+import { CONTACT_EMAIL } from "@/lib/email";
+import { sendMail } from "@/lib/mailer";
 
 type Body = { name?: string; email?: string; phone?: string; message?: string };
 
@@ -33,40 +33,33 @@ export async function POST(request: Request): Promise<NextResponse> {
     return NextResponse.json({ error: "Message trop long." }, { status: 400 });
   }
 
-  const apiKey = process.env.RESEND_API_KEY;
-  if (!apiKey) {
+  const safeName = escapeHtml(name);
+  const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
+
+  const { error } = await sendMail({
+    to: CONTACT_EMAIL,
+    replyTo: email || undefined,
+    subject: `Nouveau message de contact — ${safeName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2 style="color:#0B1F3A;">Nouveau message depuis le formulaire de contact</h2>
+        <p><strong>Nom :</strong> ${safeName}</p>
+        <p><strong>Téléphone :</strong> ${escapeHtml(phone)}</p>
+        ${email ? `<p><strong>E-mail :</strong> ${escapeHtml(email)}</p>` : ""}
+        <p><strong>Message :</strong></p>
+        <p>${safeMessage}</p>
+      </div>
+    `,
+  });
+
+  if (error === "not_configured") {
     return NextResponse.json(
       { error: "L'envoi d'e-mails n'est pas encore configuré. Contactez-nous directement par WhatsApp." },
       { status: 503 }
     );
   }
-
-  const resend = new Resend(apiKey);
-  const safeName = escapeHtml(name);
-  const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
-
-  try {
-    const { error } = await resend.emails.send({
-      from: EMAIL_SENDER,
-      to: CONTACT_EMAIL,
-      replyTo: email || undefined,
-      subject: `Nouveau message de contact — ${safeName}`,
-      html: `
-        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-          <h2 style="color:#0B1F3A;">Nouveau message depuis le formulaire de contact</h2>
-          <p><strong>Nom :</strong> ${safeName}</p>
-          <p><strong>Téléphone :</strong> ${escapeHtml(phone)}</p>
-          ${email ? `<p><strong>E-mail :</strong> ${escapeHtml(email)}</p>` : ""}
-          <p><strong>Message :</strong></p>
-          <p>${safeMessage}</p>
-        </div>
-      `,
-    });
-    if (error) {
-      return NextResponse.json({ error: "Échec de l'envoi. Réessayez ou contactez-nous par WhatsApp." }, { status: 502 });
-    }
-    return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ error: "Échec de l'envoi. Réessayez ou contactez-nous par WhatsApp." }, { status: 500 });
+  if (error) {
+    return NextResponse.json({ error: "Échec de l'envoi. Réessayez ou contactez-nous par WhatsApp." }, { status: 502 });
   }
+  return NextResponse.json({ ok: true });
 }
