@@ -5,6 +5,11 @@ import { getActivePlan } from "@/lib/db/subscriptionPlans";
 import { formatFCFA } from "@/lib/format";
 
 export const metadata = { title: "Nos offres vendeur" };
+// Must always reflect the Super Admin's live is_active toggle -- without
+// this, Next's fetch Data Cache can keep serving a stale snapshot of
+// subscription_plans from the first render even though the route itself
+// is dynamically rendered per-request.
+export const revalidate = 0;
 
 const FREE_FALLBACK = [
   "Boutique en ligne",
