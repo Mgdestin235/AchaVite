@@ -43,6 +43,10 @@ export default function PlansPage() {
         Ces valeurs sont lues en direct par la page d&apos;accueil et le flux d&apos;abonnement vendeur —
         aucun prix n&apos;est codé en dur dans l&apos;application.
       </p>
+      <p className="rounded-lg bg-navy/5 px-3 py-2 text-xs font-medium text-navy">
+        <strong>Actif</strong> = paiement obligatoire avant la création du compte vendeur ·{" "}
+        <strong>Désactivé</strong> = offre gratuite, compte créé directement sans paiement.
+      </p>
       {plans.map((plan) => (
         <PlanForm key={plan.id} plan={plan} onSave={(patch) => handleSave(plan, patch)} />
       ))}
