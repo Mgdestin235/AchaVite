@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
-import { syntheticEmailForPhone } from "@/lib/buyerAuth";
+import { GOOGLE_AUTH_ENABLED, syntheticEmailForPhone } from "@/lib/buyerAuth";
 
 export default function LoginPage() {
   return (
@@ -56,13 +56,16 @@ function LoginForm() {
         Retrouvez vos commandes et finalisez vos achats.
       </p>
 
-      <GoogleSignInButton redirect={redirect} />
-
-      <div className="my-4 flex items-center gap-3 text-xs text-gray-400">
-        <span className="h-px flex-1 bg-gray-200" />
-        ou
-        <span className="h-px flex-1 bg-gray-200" />
-      </div>
+      {GOOGLE_AUTH_ENABLED && (
+        <>
+          <GoogleSignInButton redirect={redirect} />
+          <div className="my-4 flex items-center gap-3 text-xs text-gray-400">
+            <span className="h-px flex-1 bg-gray-200" />
+            ou
+            <span className="h-px flex-1 bg-gray-200" />
+          </div>
+        </>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-3">
         <input

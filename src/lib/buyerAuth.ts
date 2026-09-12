@@ -14,6 +14,17 @@
  * buyer types, so it's fully transparent to them -- they never see or
  * type an email anywhere.
  */
+/**
+ * Google sign-in requires a Client ID/Secret from a registered Google
+ * Cloud OAuth app (a Google requirement, not something any code or
+ * service can bypass) plus enabling the Google provider in Supabase.
+ * Until that's done, the button is hidden rather than shown broken
+ * ("Unsupported provider") to real visitors -- flip to true once both
+ * are configured (see chat for the setup steps). Phone + password
+ * signup/login needs neither and already works standalone.
+ */
+export const GOOGLE_AUTH_ENABLED = false;
+
 export function normalizePhone(phone: string): string {
   return phone.trim().replace(/[^\d+]/g, "");
 }
