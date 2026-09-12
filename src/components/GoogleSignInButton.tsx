@@ -22,7 +22,14 @@ export function GoogleSignInButton({ redirect }: { redirect?: string | null }) {
     const params = redirect ? `?redirect=${encodeURIComponent(redirect)}` : "";
     await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${window.location.origin}/auth/callback${params}` },
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback${params}`,
+        // Without this, Google silently reuses whichever account is
+        // already signed in on the device instead of letting the buyer
+        // pick -- prompt=select_account forces the account chooser to
+        // show every time.
+        queryParams: { prompt: "select_account" },
+      },
     });
   }
 
