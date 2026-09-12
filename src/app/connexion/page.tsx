@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { syntheticEmailForPhone } from "@/lib/buyerAuth";
 
 export default function LoginPage() {
   return (
@@ -19,7 +21,7 @@ function LoginForm() {
   const searchParams = useSearchParams();
   const supabase = createClient();
 
-  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -30,11 +32,11 @@ function LoginForm() {
     setLoading(true);
     try {
       const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email.trim(),
+        email: syntheticEmailForPhone(phone),
         password,
       });
       if (signInError) {
-        setError("Email ou mot de passe incorrect.");
+        setError("Numéro ou mot de passe incorrect.");
         return;
       }
       toast.success("Connexion réussie");
@@ -54,12 +56,20 @@ function LoginForm() {
         Retrouvez vos commandes et finalisez vos achats.
       </p>
 
+      <GoogleSignInButton redirect={redirect} />
+
+      <div className="my-4 flex items-center gap-3 text-xs text-gray-400">
+        <span className="h-px flex-1 bg-gray-200" />
+        ou
+        <span className="h-px flex-1 bg-gray-200" />
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          type="email"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="Numéro de téléphone (ex : +2356600000)"
+          type="tel"
           required
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
         />
@@ -80,12 +90,6 @@ function LoginForm() {
           {loading ? "Connexion..." : "Se connecter"}
         </button>
       </form>
-
-      <p className="mt-3 text-center text-sm">
-        <Link href="/mot-de-passe-oublie" className="font-semibold text-navy">
-          Mot de passe oublié ?
-        </Link>
-      </p>
 
       <p className="mt-4 text-center text-sm text-gray-500">
         Pas encore de compte ?{" "}

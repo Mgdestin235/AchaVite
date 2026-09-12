@@ -12,6 +12,7 @@ import { findActivePromoByCode } from "@/lib/db/promos";
 import { createOrder } from "@/lib/db/orders";
 import { saveLastOrder } from "@/lib/lastOrder";
 import { formatFCFA } from "@/lib/format";
+import { isSyntheticEmail } from "@/lib/buyerAuth";
 import { EmptyState } from "@/components/ui/EmptyState";
 import type { DeliveryMode } from "@/lib/db/types";
 import type { PromoRow } from "@/lib/db/types";
@@ -69,7 +70,11 @@ export default function CheckoutPage() {
         .eq("id", user.id)
         .maybeSingle();
       if (cancelled) return;
-      const info = { id: user.id, name: profile?.name ?? "", phone: profile?.phone ?? "", email: user.email ?? "" };
+      // A phone-signup buyer's auth email is an internal placeholder (see
+      // src/lib/buyerAuth.ts), never a real deliverable address -- never
+      // pre-fill or send anything to it.
+      const realEmail = isSyntheticEmail(user.email) ? "" : (user.email ?? "");
+      const info = { id: user.id, name: profile?.name ?? "", phone: profile?.phone ?? "", email: realEmail };
       setCustomer(info);
       setName(info.name);
       setPhone(info.phone);

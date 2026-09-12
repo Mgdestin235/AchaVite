@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { GoogleSignInButton } from "@/components/GoogleSignInButton";
+import { syntheticEmailForPhone } from "@/lib/buyerAuth";
 
 export default function RegisterPage() {
   return (
@@ -18,10 +20,10 @@ function RegisterForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
+  const redirect = searchParams.get("redirect");
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -29,41 +31,34 @@ function RegisterForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    if (!name.trim() || !phone.trim()) {
-      setError("Merci de renseigner votre nom et votre téléphone.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Le mot de passe doit contenir au moins 8 caractères.");
-      return;
-    }
-
     setLoading(true);
     try {
-      const { data, error: signUpError } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: { data: { name: name.trim(), phone: phone.trim(), role: "customer" } },
+      const res = await fetch("/api/inscription", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, phone, password }),
       });
-      if (signUpError) {
-        setError(
-          signUpError.message === "User already registered"
-            ? "Un compte existe déjà avec cet email."
-            : signUpError.message
-        );
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) {
+        setError(data.error || "Impossible de créer le compte. Réessayez.");
         return;
       }
 
-      if (!data.session) {
-        // Email confirmation is required on this project — sign in won't
-        // work until the user clicks the link Supabase just emailed them.
-        toast.success("Compte créé ! Vérifiez votre email pour confirmer votre inscription.");
+      // Account created pre-confirmed server-side -- sign in immediately
+      // so the buyer lands with a real session, no extra step.
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: syntheticEmailForPhone(phone),
+        password,
+      });
+      if (signInError) {
+        toast.success("Compte créé ! Connectez-vous.");
         router.push("/connexion");
         return;
       }
 
       toast.success("Compte créé avec succès");
-      router.push(searchParams.get("redirect") || "/boutique");
+      router.push(redirect || "/boutique");
+      router.refresh();
     } finally {
       setLoading(false);
     }
@@ -76,25 +71,27 @@ function RegisterForm() {
         Nécessaire pour commander sur AchaVite et suivre vos achats.
       </p>
 
+      <GoogleSignInButton redirect={redirect} />
+
+      <div className="my-4 flex items-center gap-3 text-xs text-gray-400">
+        <span className="h-px flex-1 bg-gray-200" />
+        ou
+        <span className="h-px flex-1 bg-gray-200" />
+      </div>
+
       <form onSubmit={handleSubmit} className="space-y-3">
         <input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Nom complet"
+          required
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
         />
         <input
           value={phone}
           onChange={(e) => setPhone(e.target.value)}
-          placeholder="Numéro de téléphone"
+          placeholder="Numéro de téléphone (ex : +2356600000)"
           type="tel"
-          className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
-        />
-        <input
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="Email"
-          type="email"
           required
           className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm outline-none focus:border-orange"
         />

@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { User, Package, MapPin, Bell, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { isSyntheticEmail } from "@/lib/buyerAuth";
 
 type CustomerProfile = { id: string; email: string; name: string | null; phone: string | null };
 
@@ -29,7 +30,8 @@ export default function AccountPage() {
         .eq("id", user.id)
         .maybeSingle();
       if (cancelled) return;
-      setCustomer({ id: user.id, email: user.email ?? "", name: profile?.name ?? null, phone: profile?.phone ?? null });
+      const realEmail = isSyntheticEmail(user.email) ? "" : (user.email ?? "");
+      setCustomer({ id: user.id, email: realEmail, name: profile?.name ?? null, phone: profile?.phone ?? null });
     });
     return () => {
       cancelled = true;
