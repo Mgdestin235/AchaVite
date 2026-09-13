@@ -40,8 +40,10 @@ export async function listVendorApplications(
 function generateAccessCode(): string {
   // No ambiguous chars (0/O, 1/I/L). 10 chars -> ~40 bits, unguessable.
   const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const bytes = new Uint32Array(10);
+  crypto.getRandomValues(bytes);
   let out = "";
-  for (let i = 0; i < 10; i++) out += alphabet[Math.floor(Math.random() * alphabet.length)];
+  for (let i = 0; i < 10; i++) out += alphabet[bytes[i] % alphabet.length];
   return out;
 }
 
@@ -52,7 +54,7 @@ export async function confirmVendorApplication(
 ): Promise<{ code: string | null; error: string | null }> {
   const code = generateAccessCode();
   const { data: userRes } = await supabase.auth.getUser();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("vendor_applications")
     .update({
       status: "confirmed",
@@ -61,8 +63,12 @@ export async function confirmVendorApplication(
       confirmed_at: new Date().toISOString(),
     })
     .eq("id", id)
-    .eq("status", "pending");
+    .eq("status", "pending")
+    .select("id");
   if (error) return { code: null, error: error.message };
+  if (!data || data.length === 0) {
+    return { code: null, error: "Cette candidature a déjà été traitée." };
+  }
   return { code, error: null };
 }
 
@@ -71,10 +77,15 @@ export async function rejectVendorApplication(
   supabase: SupabaseClient,
   id: string
 ): Promise<{ error: string | null }> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("vendor_applications")
     .update({ status: "rejected" })
     .eq("id", id)
-    .eq("status", "pending");
-  return { error: error?.message ?? null };
+    .eq("status", "pending")
+    .select("id");
+  if (error) return { error: error.message };
+  if (!data || data.length === 0) {
+    return { error: "Cette candidature a déjà été traitée." };
+  }
+  return { error: null };
 }

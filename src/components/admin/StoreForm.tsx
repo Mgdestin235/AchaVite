@@ -304,6 +304,11 @@ function StoreDocumentsSection({ store }: { store: Store | null }) {
 
   async function handleUpload(file: File) {
     if (!store) return;
+    const MAX_BYTES = 5 * 1024 * 1024;
+    if (file.size > MAX_BYTES) {
+      toast.error("Fichier trop volumineux (5 Mo maximum).");
+      return;
+    }
     setUploading(true);
     try {
       // Justificatifs go to a private Supabase Storage bucket via our own
@@ -313,7 +318,12 @@ function StoreDocumentsSection({ store }: { store: Store | null }) {
       fd.append("file", file);
       fd.append("storeId", store.id);
       const res = await fetch("/api/documents/upload", { method: "POST", body: fd });
-      const data = (await res.json()) as { path?: string; error?: string };
+      let data: { path?: string; error?: string };
+      try {
+        data = (await res.json()) as { path?: string; error?: string };
+      } catch {
+        throw new Error("Échec du téléversement (fichier trop volumineux ou serveur indisponible).");
+      }
       if (!res.ok || !data.path) throw new Error(data.error || "Échec du téléversement");
       const { error } = await addStoreDocument(supabase, store.id, label, data.path);
       if (error) throw new Error(error);
@@ -341,7 +351,7 @@ function StoreDocumentsSection({ store }: { store: Store | null }) {
       <p className="mb-1 text-xs font-semibold uppercase text-gray-400">Documents justificatifs</p>
       <p className="mb-3 text-xs text-gray-500">
         Joignez les pièces demandées pour la validation de votre boutique par l&apos;équipe AchaVite
-        (pièce d&apos;identité, registre de commerce...). PDF ou photo, 15 Mo maximum.
+        (pièce d&apos;identité, registre de commerce...). PDF ou photo, 5 Mo maximum.
       </p>
 
       {!store ? (

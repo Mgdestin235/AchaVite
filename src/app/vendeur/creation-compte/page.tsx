@@ -22,7 +22,7 @@ function CreateVendorAccountForm() {
   const supabase = createClient();
   const searchParams = useSearchParams();
   const offre = searchParams.get("offre"); // "free" | "pro" | null (null = code flow)
-  const planCode = offre === "pro" ? "pro_monthly" : "trial";
+  const offrePlanCode = offre === "pro" ? "pro_monthly" : "trial";
 
   // "?offre=..." mode: check live (server-truth, via public RLS) whether
   // this plan currently requires payment. Never trust the query string
@@ -36,7 +36,7 @@ function CreateVendorAccountForm() {
     supabase
       .from("subscription_plans")
       .select("is_active")
-      .eq("code", planCode)
+      .eq("code", offrePlanCode)
       .maybeSingle()
       .then(({ data }) => {
         if (cancelled) return;
@@ -47,13 +47,14 @@ function CreateVendorAccountForm() {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [offre, planCode]);
+  }, [offre, offrePlanCode]);
 
   // Code-flow state (no ?offre -- unlocked via a Super Admin-confirmed access code).
   const [accessCode, setAccessCode] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [lockedEmail, setLockedEmail] = useState("");
+  const [lockedPlanCode, setLockedPlanCode] = useState("");
   const [codeError, setCodeError] = useState("");
 
   // Account form state (shared by both flows).
@@ -84,6 +85,7 @@ function CreateVendorAccountForm() {
         return;
       }
       setLockedEmail(data.email ?? "");
+      setLockedPlanCode(data.planCode ?? "trial");
       setUnlocked(true);
     } finally {
       setVerifying(false);
@@ -107,7 +109,7 @@ function CreateVendorAccountForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          planCode,
+          planCode: unlocked ? lockedPlanCode : offrePlanCode,
           accessCode: unlocked ? accessCode : undefined,
           email: unlocked ? lockedEmail : email,
           password,

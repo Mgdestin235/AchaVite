@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { GOOGLE_AUTH_ENABLED, syntheticEmailForPhone } from "@/lib/buyerAuth";
+import { safeRedirect } from "@/lib/safeRedirect";
 
 export default function RegisterPage() {
   return (
@@ -57,7 +58,7 @@ function RegisterForm() {
       }
 
       toast.success("Compte créé avec succès");
-      router.push(redirect || "/boutique");
+      router.push(safeRedirect(redirect));
       router.refresh();
     } finally {
       setLoading(false);

@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { GoogleSignInButton } from "@/components/GoogleSignInButton";
 import { GOOGLE_AUTH_ENABLED, syntheticEmailForPhone } from "@/lib/buyerAuth";
+import { safeRedirect } from "@/lib/safeRedirect";
 
 export default function LoginPage() {
   return (
@@ -40,7 +41,7 @@ function LoginForm() {
         return;
       }
       toast.success("Connexion réussie");
-      router.push(searchParams.get("redirect") || "/boutique");
+      router.push(safeRedirect(searchParams.get("redirect")));
       router.refresh();
     } finally {
       setLoading(false);
@@ -93,6 +94,12 @@ function LoginForm() {
           {loading ? "Connexion..." : "Se connecter"}
         </button>
       </form>
+
+      <p className="mt-3 text-center text-sm">
+        <Link href="/mot-de-passe-oublie" className="font-semibold text-navy">
+          Mot de passe oublié ?
+        </Link>
+      </p>
 
       <p className="mt-4 text-center text-sm text-gray-500">
         Pas encore de compte ?{" "}
