@@ -1,10 +1,11 @@
 # Vidéo de sensibilisation — Choléra (AJASD)
 
-Projet [Remotion](https://www.remotion.dev/) qui génère la vidéo de
-sensibilisation « Le choléra est une maladie dangereuse » à partir du script
-fourni. Le texte de chaque réplique est animé à l'écran (sous-titrage
-intégré), avec un habillage graphique par icônes et couleurs selon le ton du
-message (alerte, neutre, positif, marque).
+Projet [Remotion](https://www.remotion.dev/) qui génère la vidéo « LE
+CHOLÉRA, C'EST QUOI ? » (campagne AJASD) à partir du texte de narration
+fourni, repris mot pour mot. Le texte de chaque réplique est animé à l'écran
+(sous-titrage intégré), avec un habillage graphique par icônes et couleurs
+selon le ton du message (alerte, neutre, positif, marque). Durée ~1 min 50
+(durée cible demandée), carton de titre en ouverture.
 
 Ce dossier est un projet Node autonome, indépendant de l'application
 Next.js/e-commerce à la racine du dépôt (ses dépendances ne se mélangent
@@ -33,7 +34,7 @@ npm start          # ouvre Remotion Studio (prévisualisation + lecture)
 npm run build       # -> out/cholera-campaign.mp4
 ```
 
-Format par défaut : 1080×1920 (vertical, 9:16), 30 im/s, ~2 min 20 —
+Format par défaut : 1080×1920 (vertical, 9:16), 30 im/s, ~1 min 52 —
 adapté à un partage WhatsApp/Facebook/Statuts. Pour un format paysage
 16:9 (YouTube, TV), modifie `WIDTH`/`HEIGHT` dans `src/lib/timing.ts`.
 

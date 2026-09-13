@@ -5,6 +5,7 @@ import { CreditsScene } from "./scenes/CreditsScene";
 import { ListScene } from "./scenes/ListScene";
 import { PillarsScene } from "./scenes/PillarsScene";
 import { StatementScene } from "./scenes/StatementScene";
+import { TitleScene } from "./scenes/TitleScene";
 
 export const CholeraCampaign: React.FC = () => {
   const timeline = getBeatTimeline();
@@ -29,6 +30,7 @@ export const CholeraCampaign: React.FC = () => {
 
       {timeline.map(({ beat, from, durationInFrames }, i) => (
         <Sequence key={i} from={from} durationInFrames={durationInFrames}>
+          {beat.type === "title" && <TitleScene beat={beat} />}
           {beat.type === "statement" && <StatementScene beat={beat} />}
           {beat.type === "list" && <ListScene beat={beat} />}
           {beat.type === "pillars" && <PillarsScene beat={beat} />}

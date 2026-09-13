@@ -34,4 +34,6 @@ export type PillarsBeat = {
 
 export type CreditsBeat = { type: "credits" };
 
-export type Beat = StatementBeat | ListBeat | PillarsBeat | CreditsBeat;
+export type TitleBeat = { type: "title"; title: string; subtitle: string };
+
+export type Beat = StatementBeat | ListBeat | PillarsBeat | CreditsBeat | TitleBeat;

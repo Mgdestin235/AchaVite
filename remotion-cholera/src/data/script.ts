@@ -1,12 +1,16 @@
 import type { Beat } from "../types";
 
 /**
- * Découpage du script de sensibilisation "Le choléra est une maladie
- * dangereuse" (AJASD) en séquences ("beats") pour la vidéo.
- * Le texte affiché à l'écran reprend fidèlement le script fourni ; il sert
- * aussi de sous-titrage intégré (la vidéo reste compréhensible sans son).
+ * Texte exact de la narration "LE CHOLÉRA, C'EST QUOI ?" (AJASD), découpé en
+ * séquences ("beats") pour la vidéo. Chaque réplique est reprise mot pour
+ * mot — le texte affiché à l'écran sert aussi de sous-titrage intégré.
  */
 export const beats: Beat[] = [
+  {
+    type: "title",
+    title: "LE CHOLÉRA, C'EST QUOI ?",
+    subtitle: "Campagne de sensibilisation AJASD",
+  },
   {
     type: "statement",
     text: "Une simple gorgée d'eau peut-elle rendre malade ?",
@@ -68,7 +72,10 @@ export const beats: Beat[] = [
     title: "Comment se protéger",
     tone: "positive",
     items: [
-      { icon: "hands", text: "Lavons-nous régulièrement les mains avec de l'eau et du savon." },
+      {
+        icon: "hands",
+        text: "D'abord, lavons-nous régulièrement les mains avec de l'eau et du savon.",
+      },
       { icon: "drop", text: "Consommons une eau sûre et propre." },
       { icon: "food", text: "Protégeons nos aliments contre toute contamination." },
       { icon: "storage", text: "Conservons correctement notre eau." },
@@ -76,7 +83,7 @@ export const beats: Beat[] = [
       { icon: "leaf", text: "Gardons notre environnement propre." },
       {
         icon: "people",
-        text: "Adoptons de bonnes pratiques d'hygiène en famille et dans nos communautés.",
+        text: "Et surtout, adoptons de bonnes pratiques d'hygiène au sein de nos familles et dans nos communautés.",
       },
     ],
   },
@@ -84,10 +91,10 @@ export const beats: Beat[] = [
     type: "pillars",
     tone: "positive",
     items: [
-      { icon: "drop", text: "Une eau sûre" },
-      { icon: "hands", text: "Des mains propres" },
-      { icon: "leaf", text: "Un environnement sain" },
-      { icon: "toilet", text: "Des installations bien entretenues" },
+      { icon: "drop", text: "Une eau sûre." },
+      { icon: "hands", text: "Des mains propres." },
+      { icon: "leaf", text: "Un environnement sain." },
+      { icon: "toilet", text: "Des installations bien entretenues." },
     ],
   },
   {
@@ -133,7 +140,7 @@ export const beats: Beat[] = [
   },
   {
     type: "statement",
-    text: "Hygiène + Eau sûre = Protection",
+    text: "Hygiène, plus eau sûre, égale protection.",
     tone: "positive",
     big: true,
     icon: "shield",
