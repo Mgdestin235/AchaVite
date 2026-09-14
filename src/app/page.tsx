@@ -11,6 +11,7 @@ import {
   Truck,
   Sparkles,
 } from "lucide-react";
+import { ImpactGallery } from "@/components/home/ImpactGallery";
 
 const STEPS = [
   { number: 1, icon: ShoppingCart, tint: "bg-blue-50 text-blue-600", badge: "bg-blue-600", title: "Acheter", text: "Trouvez et commandez vos produits" },
@@ -161,6 +162,9 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
+
+        {/* Notre impact */}
+        <ImpactGallery />
 
         {/* Informations importantes (résumé) */}
         <div className="mb-10 mt-10 flex gap-3 rounded-2xl bg-gray-50 p-4 ring-1 ring-black/5 sm:p-5">
