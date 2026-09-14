@@ -20,6 +20,7 @@ export default function CartPage() {
   const lines = useCartStore((s) => s.lines);
   const setQty = useCartStore((s) => s.setQty);
   const removeItem = useCartStore((s) => s.removeItem);
+  const removeItems = useCartStore((s) => s.removeItems);
   const promoCode = useCartStore((s) => s.promoCode);
   const applyPromo = useCartStore((s) => s.applyPromo);
   const clearPromo = useCartStore((s) => s.clearPromo);
@@ -37,6 +38,20 @@ export default function CartPage() {
       if (cancelled) return;
       setProducts(data);
       setLoading(false);
+      // A product can vanish from here (deleted, deactivated by the vendor,
+      // or its store no longer approved) without ever being removed from
+      // the cart's stored line items -- left alone, the stale id lingers
+      // forever and the cart looks permanently "empty" with no explanation.
+      const foundIds = new Set(data.map((p) => p.id));
+      const staleIds = ids.filter((id) => !foundIds.has(id));
+      if (staleIds.length > 0) {
+        removeItems(staleIds);
+        toast.error(
+          staleIds.length === 1
+            ? "Un produit de votre panier n'est plus disponible et a été retiré."
+            : `${staleIds.length} produits de votre panier ne sont plus disponibles et ont été retirés.`
+        );
+      }
     });
     return () => {
       cancelled = true;

@@ -25,6 +25,7 @@ export default function CheckoutPage() {
   const promoCode = useCartStore((s) => s.promoCode);
   const clearCart = useCartStore((s) => s.clear);
   const clearPromo = useCartStore((s) => s.clearPromo);
+  const removeItems = useCartStore((s) => s.removeItems);
 
   const ids = useMemo(() => lines.map((l) => l.productId), [lines]);
   const [customer, setCustomer] = useState<{ id: string; name: string; phone: string; email: string } | null | undefined>(
@@ -91,6 +92,16 @@ export default function CheckoutPage() {
     listPublicProductsByIds(supabase, ids).then(async (rows) => {
       if (cancelled) return;
       setProducts(rows);
+      const foundIds = new Set(rows.map((p) => p.id));
+      const staleIds = ids.filter((id) => !foundIds.has(id));
+      if (staleIds.length > 0) {
+        removeItems(staleIds);
+        toast.error(
+          staleIds.length === 1
+            ? "Un produit de votre panier n'est plus disponible et a été retiré."
+            : `${staleIds.length} produits de votre panier ne sont plus disponibles et ont été retirés.`
+        );
+      }
       const storeIds = [...new Set(rows.map((p) => p.store_id))];
       const zoneRows = await listZonesForStores(supabase, storeIds);
       if (cancelled) return;

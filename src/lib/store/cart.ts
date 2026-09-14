@@ -9,6 +9,7 @@ type CartState = {
   promoCode?: string;
   addItem: (productId: string, qty?: number) => void;
   removeItem: (productId: string) => void;
+  removeItems: (productIds: string[]) => void;
   setQty: (productId: string, qty: number) => void;
   applyPromo: (code: string) => void;
   clearPromo: () => void;
@@ -35,6 +36,10 @@ export const useCartStore = create<CartState>()(
       removeItem: (productId) =>
         set((state) => ({
           lines: state.lines.filter((l) => l.productId !== productId),
+        })),
+      removeItems: (productIds) =>
+        set((state) => ({
+          lines: state.lines.filter((l) => !productIds.includes(l.productId)),
         })),
       setQty: (productId, qty) =>
         set((state) => ({
