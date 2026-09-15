@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "vivideo": {
+      "type": "http",
+      "url": "https://api.vivideo.ai/mcp",
+      "headers": {
+        "Authorization": "Bearer ${VIVIDEO_API_KEY}"
+      }
+    }
+  }
+}
